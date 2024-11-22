@@ -1,0 +1,13 @@
+{
+    "hello": "Привет {userName}",
+    "@hello": {
+        "placeholders": {
+            "userName": {
+                "type": "String",
+                "example": "Bob"
+            }
+        }
+    },
+    "settings": "Настройки",
+    "@settings": {}
+}

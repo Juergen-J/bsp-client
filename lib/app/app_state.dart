@@ -6,13 +6,21 @@ class AppState extends ChangeNotifier {
   Locale _locale = Locale('en');
   UserInfo? _userInfo;
 
+  AppState({required UserInfo? userInfo}) {
+    if (userInfo != null) {
+      _userInfo = userInfo;
+    }
+  }
+
   Locale get locale => _locale;
+
   UserInfo? get userInfo => _userInfo;
 
   void changeLocale(Locale newLocale) {
     _locale = newLocale;
     notifyListeners();
   }
+
   void setUserInfo(UserInfo userInfo) {
     _userInfo = userInfo;
     notifyListeners();
@@ -24,5 +32,4 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     print('UserInfo cleared');
   }
-
 }

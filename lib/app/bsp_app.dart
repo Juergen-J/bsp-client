@@ -10,26 +10,23 @@ class BSPApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => AppState(),
-      child: Consumer<AppState>(builder: (context, appState, child) {
-        return MaterialApp(
-          title: 'BSP App',
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-          ),
-          locale: appState.locale,
-          localizationsDelegates: [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate
-          ],
-          supportedLocales: appState.supportedLocales,
-          home: MainPage(),
-        );
-      }),
-    );
+    return Consumer<AppState>(builder: (context, appState, child) {
+      return MaterialApp(
+        title: 'BSP App',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+        ),
+        locale: appState.locale,
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate
+        ],
+        supportedLocales: appState.supportedLocales,
+        home: MainPage(),
+      );
+    });
   }
 }

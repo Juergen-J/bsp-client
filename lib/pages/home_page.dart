@@ -23,6 +23,7 @@ class HomePage extends StatelessWidget {
               OutlinedButton(
                   child: const Text('Logout'),
                   onPressed: () async {
+                    await logot();
                     Provider.of<AppState>(context, listen: false)
                         .clearUserInfo();
                   })
@@ -32,9 +33,7 @@ class HomePage extends StatelessWidget {
                   child: const Text('Login'),
                   onPressed: () async {
                     try {
-                      var userInfo = await auth();
-                      Provider.of<AppState>(context, listen: false)
-                          .setUserInfo(userInfo);
+                      await auth();
                     } catch (e) {
                       print('Authentication failed: $e');
                     }

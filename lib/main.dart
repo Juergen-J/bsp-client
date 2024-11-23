@@ -7,14 +7,14 @@ import 'app/bsp_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initOpenidClient();
+  var userInfo = await initOpenidClient();
   FlavorConfig(
     name: "DEV",
     color: Colors.red,
     location: BannerLocation.topEnd,
   );
   runApp(ChangeNotifierProvider(
-    create: (_) => AppState(),
+    create: (_) => AppState(userInfo: userInfo),
     child: const BSPApp(),
   ));
 }

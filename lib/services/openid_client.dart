@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'package:berlin_service_portal/services/openid_browser.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openid_client/openid_client.dart';
 import 'openid_io.dart' if (dart.library.html) 'openid_browser.dart';
 
-const keycloakUri = 'http://localhost:61406/realms/berlin-service-portal';
+const keycloakUri = 'http://localhost:50604/realms/berlin-service-portal';
 const scopes = ['profile'];
 
 Credential? credential;
@@ -22,27 +23,21 @@ Future<Client> getClient() async {
   return Client(issuer, clientId);
 }
 
-Future<void> initOpenidClient() async {
-  var uri = Uri.parse(keycloakUri);
-  if (!kIsWeb && Platform.isAndroid) {
-    uri = uri.replace(host: '10.0.2.2');
-  }
-
-  var clientId = 'public-client';
-  var issuer = await Issuer.discover(uri);
-  client = Client(issuer, clientId);
+Future<UserInfo?> initOpenidClient() async {
+  client = await getClient();
 
   credential = await getRedirectResult(client, scopes: scopes);
 
   if (credential != null) {
     print('Credential obtained on startup');
+    return credential!.getUserInfo();
   } else {
     print('No credential obtained during redirect.');
+    return null;
   }
 }
 
 Future<UserInfo> auth() async {
-  credential = await authenticate(client, scopes: scopes);
   try {
     print('Starting authentication...');
 
@@ -63,4 +58,13 @@ Future<UserInfo> auth() async {
     print('Authentication error: $e');
     rethrow; // Прокидываем исключение вверх для дальнейшей обработки
   }
+}
+
+Future<void> logot() async {
+  print("logout web");
+  await logout(client, scopes: scopes);
+}
+
+Future<void> logoutFromKeycloak() async{
+
 }

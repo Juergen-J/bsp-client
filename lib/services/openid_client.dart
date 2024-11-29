@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:openid_client/openid_client.dart';
 import 'openid_io.dart' if (dart.library.html) 'openid_browser.dart';
 
-const keycloakUri = 'http://localhost:50604/realms/berlin-service-portal';
+const keycloakUri = 'http://localhost:51315/realms/berlin-service-portal';
 const scopes = ['profile'];
 
 Credential? credential;
@@ -37,34 +37,13 @@ Future<UserInfo?> initOpenidClient() async {
   }
 }
 
-Future<UserInfo> auth() async {
+Future<void> auth() async {
   try {
     print('Starting authentication...');
 
-    // Аутентификация пользователя через OpenID клиент
     credential = await authenticate(client, scopes: scopes);
-    print('Credential obtained: ${credential != null}');
-
-    if (credential == null) {
-      throw Exception('Authentication failed or user cancelled the process.');
-    }
-
-    // Получаем информацию о пользователе
-    UserInfo userInfo = await credential!.getUserInfo();
-    print('UserInfo retrieved: ${userInfo.name}, ${userInfo.email}');
-
-    return userInfo;
   } catch (e) {
     print('Authentication error: $e');
-    rethrow; // Прокидываем исключение вверх для дальнейшей обработки
+    rethrow;
   }
-}
-
-Future<void> logot() async {
-  print("logout web");
-  await logout(client, scopes: scopes);
-}
-
-Future<void> logoutFromKeycloak() async{
-
 }

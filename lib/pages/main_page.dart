@@ -57,7 +57,7 @@ class _MainPageState extends State<MainPage> {
                           icon: Icon(Icons.search), label: 'Search'),
                       BottomNavigationBarItem(
                         icon: Icon(Icons.settings),
-                        label: AppLocalizations.of(context)!.settings,
+                        label: AppLocalizations.of(context)!.hello(userName),
                       ),
                     ],
                     currentIndex: selectedIndex,

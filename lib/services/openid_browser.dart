@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:openid_client/openid_client.dart';
 import 'package:openid_client/openid_client_browser.dart' as browser;
+
+final dio = Dio();
 
 Future<Credential> authenticate(Client client,
     {List<String> scopes = const []}) async {
@@ -17,6 +20,9 @@ Future<Credential?> getRedirectResult(Client client,
   var authenticator = browser.Authenticator(client, scopes: scopes);
 
   var c = await authenticator.credential;
+  if (c == null) {
+    print("credential is null in getRedirect result ");
+  }
 
   return c;
 }

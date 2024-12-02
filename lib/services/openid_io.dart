@@ -35,3 +35,8 @@ Future<Credential?> getRedirectResult(Client client,
     {List<String> scopes = const []}) async {
   return null;
 }
+
+Future<void> logout(Client client,
+    {List<String> scopes = const []}) async {
+  return null;
+}

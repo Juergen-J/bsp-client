@@ -23,8 +23,10 @@ class HomePage extends StatelessWidget {
               OutlinedButton(
                   child: const Text('Logout'),
                   onPressed: () async {
+                    await logoutUser();
                     Provider.of<AppState>(context, listen: false)
                         .clearUserInfo();
+
                   })
             ],
             if (userInfo == null)

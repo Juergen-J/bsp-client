@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:html';
 
 import 'package:dio/dio.dart';
 import 'package:openid_client/openid_client.dart';
@@ -25,4 +26,14 @@ Future<Credential?> getRedirectResult(Client client,
   }
 
   return c;
+}
+
+Future<void> logout(Client client,
+    {List<String> scopes = const []}) async {
+  var authenticator = browser.Authenticator(client, scopes: scopes);
+
+  authenticator.logout();
+  window.localStorage.remove('openid_client:state');
+  window.localStorage.remove('openid_client:auth');
+  return Completer<void>().future;
 }

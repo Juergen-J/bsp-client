@@ -222,9 +222,28 @@ class _MessagesPageState extends State<MessagesPage> {
             itemCount: _messages.length,
             itemBuilder: (context, index) {
               final message = _messages[index];
-              return ListTile(
-                title: Text(message['message'] ?? ''),
-                subtitle: Text('From: ${message['username'] ?? 'Unknown'}'),
+              final isCurrentUser = message['username'] == username;
+
+              return Container(
+                alignment: isCurrentUser
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isCurrentUser
+                        ? Colors.blueAccent
+                        : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    message['message'] ?? '',
+                    style: TextStyle(
+                      color: isCurrentUser ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ),
               );
             },
           ),
@@ -248,7 +267,6 @@ class _MessagesPageState extends State<MessagesPage> {
             ),
           ],
         ),
-        Padding(padding: EdgeInsets.all(10))
       ],
     );
   }

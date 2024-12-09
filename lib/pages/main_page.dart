@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/pages/messages_page.dart';
 import 'package:berlin_service_portal/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -20,15 +21,13 @@ class _MainPageState extends State<MainPage> {
       case 0:
         page = HomePage();
       case 1:
-        page = Placeholder();
+        page = MessagesPage();
       case 2:
         page = SettingsPage();
       default:
         throw UnimplementedError('no widget for $selectedIndex');
     }
 
-    // The container for the current page, with its background color
-    // and subtle switching animation.
     var mainArea = ColoredBox(
       color: colorScheme.surfaceVariant,
       child: AnimatedSwitcher(
@@ -54,7 +53,7 @@ class _MainPageState extends State<MainPage> {
                         label: 'Home',
                       ),
                       BottomNavigationBarItem(
-                          icon: Icon(Icons.search), label: 'Search'),
+                          icon: Icon(Icons.message), label: 'Messages'),
                       BottomNavigationBarItem(
                         icon: Icon(Icons.settings),
                         label: AppLocalizations.of(context)!.hello("boris"),
@@ -71,34 +70,34 @@ class _MainPageState extends State<MainPage> {
               ],
             );
           } else {
-            return Row(
-              children: [
-                SafeArea(
-                  child: NavigationRail(
-                    extended: constraints.maxWidth >= 600,
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.home),
-                        label: Text('Home'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.search),
-                        label: Text('Search'),
-                      ),
-                      NavigationRailDestination(
-                          icon: Icon(Icons.settings),
-                          label: Text(AppLocalizations.of(context)!.settings))
-                    ],
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: (value) {
-                      setState(() {
-                        selectedIndex = value;
-                      });
-                    },
-                  ),
+            return DefaultTabController(
+              initialIndex: selectedIndex,
+              length: 3,
+              child: Scaffold(
+                appBar: AppBar(
+                  title: const Text("App"),
+                  leading: Icon(Icons.abc),
+                  bottom: const TabBar(tabs: <Widget>[
+                    Tab(
+                      icon: Icon(Icons.home),
+                      text: "Home",
+                    ),
+                    Tab(
+                      icon: Icon(Icons.message),
+                      text: "Messages",
+                    ),
+                    Tab(
+                      icon: Icon(Icons.settings),
+                      text: "Settings",
+                    )
+                  ]),
                 ),
-                Expanded(child: mainArea),
-              ],
+                body: TabBarView(children: <Widget>[
+                  HomePage(),
+                  MessagesPage(),
+                  SettingsPage()
+                ]),
+              ),
             );
           }
         },

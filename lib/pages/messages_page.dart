@@ -18,6 +18,7 @@ class _MessagesPageState extends State<MessagesPage> {
   List<Map<String, dynamic>> _conversations = [];
   String? _selectedChatId;
   List<Map<String, dynamic>> _messages = [];
+  bool _showMessagesOnly = false;
 
   @override
   void initState() {
@@ -47,7 +48,6 @@ class _MessagesPageState extends State<MessagesPage> {
   }
 
   void _connectStompClient() {
-
     _stompClient = StompClient(
       config: StompConfig(
         url: 'ws://$host/chat',
@@ -72,7 +72,6 @@ class _MessagesPageState extends State<MessagesPage> {
     print('Connected to WebSocket');
     _subscribeToWs();
 
-    //todo ?
     _stompClient.send(
       destination: '/app/v1/add-user',
       body: jsonEncode({"username": username}),
@@ -87,10 +86,7 @@ class _MessagesPageState extends State<MessagesPage> {
           print('Message received: ${frame.body}');
           setState(() {
             final message = jsonDecode(frame.body!);
-            print(message);
-            setState(() {
-              _messages.add(message);
-            });
+            _messages.add(message);
           });
         }
       },
@@ -99,8 +95,8 @@ class _MessagesPageState extends State<MessagesPage> {
 
   Future<void> _fetchMessages() async {
     try {
-      final response = await Dio().get(
-          'http://localhost:8090/v1/user/$userId/chat/$_selectedChatId/message');
+      final response = await Dio()
+          .get('http://$host/v1/user/$userId/chat/$_selectedChatId/message');
       final rawData =
           response.data is String ? jsonDecode(response.data) : response.data;
       final data = rawData['content'] as List;
@@ -145,84 +141,115 @@ class _MessagesPageState extends State<MessagesPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_stompClient.isActive) {
-      return const Center(child: CircularProgressIndicator());
-    }
     return Scaffold(
       appBar: AppBar(
         title: const Text("Messages"),
+        leading: _showMessagesOnly
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _showMessagesOnly = false;
+                  });
+                },
+              )
+            : null,
       ),
-      body: Row(
-        children: [
-          // Sidebar for conversations
-          Container(
-            width: 250,
-            color: Colors.grey[200],
-            child: ListView.builder(
-              itemCount: _conversations.length,
-              itemBuilder: (context, index) {
-                final conversation = _conversations[index];
-                return ListTile(
-                  title: Text(conversation['lastMessage'] ?? 'No message'),
-                  subtitle:
-                      Text('Unread: ${conversation['countUnreadMessages']}'),
-                  trailing: Text(
-                      conversation['lastMessageDate']?.substring(0, 10) ?? ''),
-                  onTap: () {
-                    setState(() {
-                      _selectedChatId = conversation['chatId'];
-                      _fetchMessages();
-                    });
-                  },
-                  selected: _selectedChatId == conversation['chatId'],
-                );
-              },
-            ),
-          ),
-          // Main chat area
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final message = _messages[index];
-                        return ListTile(
-                          title: Text(message['message'] ?? ''),
-                          subtitle:
-                              Text('From: ${message['username'] ?? 'Unknown'}'),
-                        );
-                      },
-                    ),
-                  ),
-                  Form(
-                    child: TextFormField(
-                      controller: _controller,
-                      decoration: const InputDecoration(
-                        labelText: 'Send a message',
-                        border: OutlineInputBorder(),
-                      ),
-                      onFieldSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _sendMessage,
-        tooltip: 'Send message',
-        child: const Icon(Icons.send),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 450) {
+            if (_showMessagesOnly) {
+              return _buildMessagesView();
+            } else {
+              return _buildConversationsView();
+            }
+          } else {
+            return Row(
+              children: [
+                Container(
+                  width: 250,
+                  color: Colors.grey[200],
+                  child: _buildConversationsView(),
+                ),
+                Expanded(child: _buildMessagesView()),
+              ],
+            );
+          }
+        },
       ),
     );
   }
-}
 
-class Message {}
+  Widget _buildConversationsView() {
+    return ListView.builder(
+      itemCount: _conversations.length,
+      itemBuilder: (context, index) {
+        final conversation = _conversations[index];
+        return MouseRegion(
+          onEnter: (_) => setState(() {}),
+          onExit: (_) => setState(() {}),
+          child: Card(
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            child: ListTile(
+              title: Text(
+                conversation['lastMessage'] ?? 'No message',
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text('Unread: ${conversation['countUnreadMessages']}'),
+              trailing:
+                  Text(conversation['lastMessageDate']?.substring(0, 10) ?? ''),
+              onTap: () {
+                setState(() {
+                  _selectedChatId = conversation['chatId'];
+                  _fetchMessages();
+                  _showMessagesOnly = true;
+                });
+              },
+              selected: _selectedChatId == conversation['chatId'],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMessagesView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: ListView.builder(
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final message = _messages[index];
+              return ListTile(
+                title: Text(message['message'] ?? ''),
+                subtitle: Text('From: ${message['username'] ?? 'Unknown'}'),
+              );
+            },
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _controller,
+                minLines: 1,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Send a message',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.send),
+              onPressed: _sendMessage,
+            ),
+          ],
+        ),
+        Padding(padding: EdgeInsets.all(10))
+      ],
+    );
+  }
+}

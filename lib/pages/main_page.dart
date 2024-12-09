@@ -28,8 +28,6 @@ class _MainPageState extends State<MainPage> {
         throw UnimplementedError('no widget for $selectedIndex');
     }
 
-    // The container for the current page, with its background color
-    // and subtle switching animation.
     var mainArea = ColoredBox(
       color: colorScheme.surfaceVariant,
       child: AnimatedSwitcher(
@@ -72,34 +70,34 @@ class _MainPageState extends State<MainPage> {
               ],
             );
           } else {
-            return Row(
-              children: [
-                SafeArea(
-                  child: NavigationRail(
-                    extended: constraints.maxWidth >= 600,
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.home),
-                        label: Text('Home'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.message),
-                        label: Text('Messages'),
-                      ),
-                      NavigationRailDestination(
-                          icon: Icon(Icons.settings),
-                          label: Text(AppLocalizations.of(context)!.settings))
-                    ],
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: (value) {
-                      setState(() {
-                        selectedIndex = value;
-                      });
-                    },
-                  ),
+            return DefaultTabController(
+              initialIndex: selectedIndex,
+              length: 3,
+              child: Scaffold(
+                appBar: AppBar(
+                  title: const Text("App"),
+                  leading: Icon(Icons.abc),
+                  bottom: const TabBar(tabs: <Widget>[
+                    Tab(
+                      icon: Icon(Icons.home),
+                      text: "Home",
+                    ),
+                    Tab(
+                      icon: Icon(Icons.message),
+                      text: "Messages",
+                    ),
+                    Tab(
+                      icon: Icon(Icons.settings),
+                      text: "Settings",
+                    )
+                  ]),
                 ),
-                Expanded(child: mainArea),
-              ],
+                body: TabBarView(children: <Widget>[
+                  HomePage(),
+                  MessagesPage(),
+                  SettingsPage()
+                ]),
+              ),
             );
           }
         },

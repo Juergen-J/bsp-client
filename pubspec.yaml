@@ -19,6 +19,7 @@ dependencies:
   openid_client: ^0.4.8
   url_launcher: ^6.3.1
   dio: ^5.7.0
+  stomp_dart_client: ^2.1.0
 
 dev_dependencies:
   flutter_test:

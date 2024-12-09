@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/pages/messages_page.dart';
 import 'package:berlin_service_portal/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -20,7 +21,7 @@ class _MainPageState extends State<MainPage> {
       case 0:
         page = HomePage();
       case 1:
-        page = Placeholder();
+        page = MessagesPage();
       case 2:
         page = SettingsPage();
       default:
@@ -54,7 +55,7 @@ class _MainPageState extends State<MainPage> {
                         label: 'Home',
                       ),
                       BottomNavigationBarItem(
-                          icon: Icon(Icons.search), label: 'Search'),
+                          icon: Icon(Icons.message), label: 'Messages'),
                       BottomNavigationBarItem(
                         icon: Icon(Icons.settings),
                         label: AppLocalizations.of(context)!.hello("boris"),
@@ -82,8 +83,8 @@ class _MainPageState extends State<MainPage> {
                         label: Text('Home'),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.search),
-                        label: Text('Search'),
+                        icon: Icon(Icons.message),
+                        label: Text('Messages'),
                       ),
                       NavigationRailDestination(
                           icon: Icon(Icons.settings),

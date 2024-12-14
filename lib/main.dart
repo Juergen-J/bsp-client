@@ -4,6 +4,7 @@ import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';
 import 'app/app_state.dart';
 import 'app/bsp_app.dart';
+import 'app/stomp_client_notifier.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,8 +14,8 @@ void main() async {
     color: Colors.red,
     location: BannerLocation.topEnd,
   );
-  runApp(ChangeNotifierProvider(
-    create: (_) => AppState(userInfo: userInfo),
-    child: const BSPApp(),
-  ));
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider(create: (_) => AppState(userInfo: userInfo)),
+    ChangeNotifierProvider(create: (_) => StompClientNotifier())
+  ], child: const BSPApp()));
 }

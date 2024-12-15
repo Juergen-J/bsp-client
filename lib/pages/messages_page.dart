@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'dart:convert';
+
+import '../app/stomp_client_notifier.dart';
 
 class MessagesPage extends StatefulWidget {
   @override
@@ -19,12 +22,13 @@ class _MessagesPageState extends State<MessagesPage> {
   String? _selectedChatId;
   List<Map<String, dynamic>> _messages = [];
   bool _showMessagesOnly = false;
+  late StompClientNotifier stompProvider;
 
   @override
   void initState() {
     super.initState();
     _fetchConversations();
-    _connectStompClient();
+    _newConnectStompClient();
   }
 
   Future<void> _fetchConversations() async {
@@ -66,6 +70,18 @@ class _MessagesPageState extends State<MessagesPage> {
     );
 
     _stompClient.activate();
+  }
+
+  void _newConnectStompClient() {
+    stompProvider = Provider.of<StompClientNotifier>(context, listen: false);
+    stompProvider.connectStompClient();
+    stompProvider.addListener(() {
+      print('Message added: ${stompProvider.message}');
+      setState(() {
+        final message = jsonDecode(stompProvider.message);
+        _messages.add(message);
+      });
+    });
   }
 
   void _onStompConnected(StompFrame frame) {
@@ -123,9 +139,9 @@ class _MessagesPageState extends State<MessagesPage> {
         "message": _controller.text
       };
 
-      _stompClient.send(
+      stompProvider.send(
         destination: '/app/v1/send-message',
-        body: jsonEncode(message),
+        message: message,
       );
 
       _controller.clear();

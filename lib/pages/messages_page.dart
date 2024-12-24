@@ -1,8 +1,8 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'dart:convert';
+import '../services/openid_client.dart';
 
 import '../app/stomp_client_notifier.dart';
 
@@ -33,19 +33,32 @@ class _MessagesPageState extends State<MessagesPage> {
 
   Future<void> _fetchConversations() async {
     try {
+      final httpClient = await getAccessTokenHttpClient();
+      if (httpClient == null) {
+        print('HTTP client is null. Authentication might have failed.');
+        return;
+      }
+
       final response =
-          await Dio().get('http://$host/v1/user/$userId/message-report');
-      final data = response.data['content'] as List;
-      setState(() {
-        _conversations = data
-            .map((item) => {
-                  'chatId': item['chatId'],
-                  'countUnreadMessages': item['countUnreadMessages'],
-                  'lastMessage': item['lastMessage'],
-                  'lastMessageDate': item['lastMessageDate'],
-                })
-            .toList();
-      });
+          await httpClient.get(Uri.parse('http://$host/v1/message-report'));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final data = jsonData['content'] as List;
+        print('Data: $data');
+        setState(() {
+          _conversations = data
+              .map((item) => {
+                    'chatId': item['chatId'],
+                    'countUnreadMessages': item['countUnreadMessages'],
+                    'lastMessage': item['lastMessage'],
+                    'lastMessageDate': item['lastMessageDate'],
+                  })
+              .toList();
+        });
+      } else {
+        print('Request failed with status code: ${response.statusCode}');
+      }
     } catch (e) {
       print('Error fetching conversations: $e');
     }
@@ -87,11 +100,6 @@ class _MessagesPageState extends State<MessagesPage> {
   void _onStompConnected(StompFrame frame) {
     print('Connected to WebSocket');
     _subscribeToWs();
-
-    _stompClient.send(
-      destination: '/app/v1/add-user',
-      body: jsonEncode({"username": username}),
-    );
   }
 
   void _subscribeToWs() {
@@ -111,21 +119,29 @@ class _MessagesPageState extends State<MessagesPage> {
 
   Future<void> _fetchMessages() async {
     try {
-      final response = await Dio()
-          .get('http://$host/v1/user/$userId/chat/$_selectedChatId/message');
-      final rawData =
-          response.data is String ? jsonDecode(response.data) : response.data;
-      final data = rawData['content'] as List;
-      setState(() {
-        _messages = data
-            .map((item) => {
-                  'messageId': item['messageId'],
-                  'username': item['username'],
-                  'chatId': item['chatId'],
-                  'message': item['message'],
-                })
-            .toList();
-      });
+      final httpClient = await getAccessTokenHttpClient();
+      if (httpClient == null) {
+        print('HTTP client is null. Authentication might have failed.');
+        return;
+      }
+      final response = await httpClient
+          .get(Uri.parse('http://$host/v1/chat/$_selectedChatId/message'));
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final data = jsonData['content'] as List;
+        setState(() {
+          _messages = data
+              .map((item) => {
+                    'messageId': item['messageId'],
+                    'username': item['username'],
+                    'chatId': item['chatId'],
+                    'message': item['message'],
+                  })
+              .toList();
+        });
+      } else {
+        print('Request failed with status code: ${response.statusCode}');
+      }
     } catch (e) {
       print('Error fetching messages: $e');
     }

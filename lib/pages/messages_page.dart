@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_flavor/flutter_flavor.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'dart:convert';
+import '../app/app_state.dart';
 import '../services/openid_client.dart';
 
 import '../app/stomp_client_notifier.dart';
@@ -14,9 +17,7 @@ class MessagesPage extends StatefulWidget {
 class _MessagesPageState extends State<MessagesPage> {
   late StompClient _stompClient;
   final TextEditingController _controller = TextEditingController();
-  final String userId = "1"; // Example userId
-  final String username = "1"; // Example username
-  final String host = "localhost:8090";
+  final String _host = FlavorConfig.instance.variables['beHost'];
 
   List<Map<String, dynamic>> _conversations = [];
   String? _selectedChatId;
@@ -40,7 +41,7 @@ class _MessagesPageState extends State<MessagesPage> {
       }
 
       final response =
-          await httpClient.get(Uri.parse('http://$host/v1/message-report'));
+          await httpClient.get(Uri.parse('http://$_host/v1/message-report'));
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -64,27 +65,6 @@ class _MessagesPageState extends State<MessagesPage> {
     }
   }
 
-  void _connectStompClient() {
-    _stompClient = StompClient(
-      config: StompConfig(
-        url: 'ws://$host/chat',
-        onConnect: _onStompConnected,
-        onStompError: (frame) {
-          print('Stomp error: ${frame.body}');
-        },
-        onWebSocketError: (error) {
-          print('WebSocket error: $error');
-        },
-        onDisconnect: (frame) {
-          print('Disconnected: ${frame.body}');
-        },
-        reconnectDelay: const Duration(seconds: 5),
-      ),
-    );
-
-    _stompClient.activate();
-  }
-
   void _newConnectStompClient() {
     stompProvider = Provider.of<StompClientNotifier>(context, listen: false);
     stompProvider.connectStompClient();
@@ -97,26 +77,6 @@ class _MessagesPageState extends State<MessagesPage> {
     });
   }
 
-  void _onStompConnected(StompFrame frame) {
-    print('Connected to WebSocket');
-    _subscribeToWs();
-  }
-
-  void _subscribeToWs() {
-    _stompClient.subscribe(
-      destination: '/user/$username/topic/messages',
-      callback: (frame) {
-        if (frame.body != null) {
-          print('Message received: ${frame.body}');
-          setState(() {
-            final message = jsonDecode(frame.body!);
-            _messages.add(message);
-          });
-        }
-      },
-    );
-  }
-
   Future<void> _fetchMessages() async {
     try {
       final httpClient = await getAccessTokenHttpClient();
@@ -125,7 +85,7 @@ class _MessagesPageState extends State<MessagesPage> {
         return;
       }
       final response = await httpClient
-          .get(Uri.parse('http://$host/v1/chat/$_selectedChatId/message'));
+          .get(Uri.parse('http://$_host/v1/chat/$_selectedChatId/message'));
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final data = jsonData['content'] as List;
@@ -149,11 +109,7 @@ class _MessagesPageState extends State<MessagesPage> {
 
   void _sendMessage() {
     if (_controller.text.isNotEmpty && _selectedChatId != null) {
-      final message = {
-        "username": username,
-        "chatId": _selectedChatId,
-        "message": _controller.text
-      };
+      final message = {"chatId": _selectedChatId, "message": _controller.text};
 
       stompProvider.send(
         destination: '/app/v1/send-message',
@@ -169,6 +125,39 @@ class _MessagesPageState extends State<MessagesPage> {
     _stompClient.deactivate();
     _controller.dispose();
     super.dispose();
+  }
+
+  String calculateConversationDate(String? conversationDateFromMessage) {
+    if (conversationDateFromMessage == null) {
+      return '';
+    }
+    DateTime conversationDate;
+    try {
+      conversationDate = DateTime.parse(conversationDateFromMessage);
+    } catch (e) {
+      return 'Error by date parse';
+    }
+
+    DateTime now = DateTime.now();
+    if (conversationDate.year == now.year &&
+        conversationDate.month == now.month &&
+        conversationDate.day == now.day) {
+      return DateFormat.Hm().format(conversationDate);
+    }
+
+    DateTime yesterday = now.subtract(Duration(days: 1));
+    if (conversationDate.year == yesterday.year &&
+        conversationDate.month == yesterday.month &&
+        conversationDate.day == yesterday.day) {
+      return 'yesterday';
+    }
+
+    DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    if (conversationDate.isAfter(startOfWeek)) {
+      return DateFormat('EEEE', 'en_EN').format(conversationDate);
+    }
+
+    return DateFormat('dd.MM.yyyy').format(conversationDate);
   }
 
   @override
@@ -199,7 +188,7 @@ class _MessagesPageState extends State<MessagesPage> {
             return Row(
               children: [
                 Container(
-                  width: 250,
+                  width: 300,
                   color: Colors.grey[200],
                   child: _buildConversationsView(),
                 ),
@@ -217,19 +206,50 @@ class _MessagesPageState extends State<MessagesPage> {
       itemCount: _conversations.length,
       itemBuilder: (context, index) {
         final conversation = _conversations[index];
+        final countUnreadMessages = conversation['countUnreadMessages'] ?? 0;
         return MouseRegion(
           onEnter: (_) => setState(() {}),
           onExit: (_) => setState(() {}),
           child: Card(
             margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
             child: ListTile(
+              leading: Stack(children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.grey[300],
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                if (countUnreadMessages > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(12)),
+                      constraints: BoxConstraints(minWidth: 18, minHeight: 18),
+                      child: Text(
+                        countUnreadMessages.toString(),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+              ]),
               title: Text(
-                conversation['lastMessage'] ?? 'No message',
+                conversation['chatName'] ?? 'No name',
                 overflow: TextOverflow.ellipsis,
               ),
-              subtitle: Text('Unread: ${conversation['countUnreadMessages']}'),
-              trailing:
-                  Text(conversation['lastMessageDate']?.substring(0, 10) ?? ''),
+              subtitle: Text(conversation['lastMessage'] ?? 'No message'),
+              trailing: Text(
+                  calculateConversationDate(conversation['lastMessageDate'])),
               onTap: () {
                 setState(() {
                   _selectedChatId = conversation['chatId'];
@@ -253,8 +273,9 @@ class _MessagesPageState extends State<MessagesPage> {
           child: ListView.builder(
             itemCount: _messages.length,
             itemBuilder: (context, index) {
+              var userInfo = Provider.of<AppState>(context).userInfo;
               final message = _messages[index];
-              final isCurrentUser = message['username'] == username;
+              final isCurrentUser = message['username'] == userInfo!.subject;
 
               return Container(
                 alignment: isCurrentUser

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -5,12 +7,13 @@ import 'package:provider/provider.dart';
 import 'package:berlin_service_portal/services/openid_client.dart';
 
 import '../app/app_state.dart';
+import '../services/chat_service.dart';
 
 class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var userInfo = Provider.of<AppState>(context).userInfo;
-    // String userName = userInfo?.name ?? 'Гость';
+    var userId;
     return Column(children: [
       Padding(
         padding: const EdgeInsets.all(16.0),
@@ -20,14 +23,31 @@ class HomePage extends StatelessWidget {
             if (userInfo != null) ...[
               Text('Hello ${userInfo.name}'),
               Text(userInfo.email ?? ''),
+              Text(userInfo.subject ?? ''),
               OutlinedButton(
                   child: const Text('Logout'),
                   onPressed: () async {
                     await logoutUser();
                     Provider.of<AppState>(context, listen: false)
                         .clearUserInfo();
-
-                  })
+                  }),
+              SizedBox(
+                height: 10,
+              ),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Enter User ID',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  userId = value;
+                },
+              ),
+              OutlinedButton(
+                  onPressed: () async {
+                    await createChatWith([userId]);
+                  },
+                  child: const Text('Create chat'))
             ],
             if (userInfo == null)
               OutlinedButton(
@@ -39,10 +59,6 @@ class HomePage extends StatelessWidget {
                       print('Authentication failed: $e');
                     }
                   }),
-            // Text(
-            //   AppLocalizations.of(context)!.hello(userName),
-            //   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            // ),
           ],
         ),
       )

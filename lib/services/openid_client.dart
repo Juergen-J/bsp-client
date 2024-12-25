@@ -7,7 +7,7 @@ import 'dart:html' as html;
 import 'package:http/http.dart' as http;
 import 'openid_io.dart' if (dart.library.html) 'openid_browser.dart';
 
-const keycloakUri = 'http://localhost:8080/realms/berlin-service-portal';
+const keycloakUri = 'http://localhost:51242/realms/berlin-service-portal';
 const scopes = ['profile'];
 
 Credential? credential;
@@ -90,7 +90,7 @@ Future<String?> getToken() async {
     TokenResponse tokenResponse = await credential!.getTokenResponse();
     print(tokenResponse.accessToken);
     return tokenResponse.accessToken;
-  }else{
+  } else {
     return null;
   }
 }

@@ -10,10 +10,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   var userInfo = await initOpenidClient();
   FlavorConfig(
-    name: "DEV",
-    color: Colors.red,
-    location: BannerLocation.topEnd,
-  );
+      name: "DEV",
+      color: Colors.red,
+      location: BannerLocation.bottomEnd,
+      variables: {"beHost": "localhost:8090"});
   runApp(MultiProvider(providers: [
     ChangeNotifierProvider(create: (_) => AppState(userInfo: userInfo)),
     ChangeNotifierProvider(create: (_) => StompClientNotifier())

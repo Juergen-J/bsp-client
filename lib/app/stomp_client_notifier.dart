@@ -1,23 +1,34 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
+import '../services/openid_client.dart';
 
-class StompClientNotifier extends ChangeNotifier{
-  final String host = "localhost:8090";
-  final String username = "1"; // Example username
-  final String userId = "1"; // Example userId
-
+class StompClientNotifier extends ChangeNotifier {
+  final String _host = FlavorConfig.instance.variables['beHost'];
 
   StompClient? _stompClient;
   String message = '';
 
-  void connectStompClient() {
+  void connectStompClient() async {
+    final String? token = await getToken();
+    if (token == null) {
+      throw Exception("Token not found");
+    }
+
     if (_stompClient == null) {
       _stompClient = StompClient(
         config: StompConfig(
-          url: 'ws://$host/chat',
+          url: 'ws://$_host/chat',
           onConnect: _onStompConnected,
+          beforeConnect: () async {
+            print('waiting to connect...');
+            await Future.delayed(const Duration(milliseconds: 5));
+            print('connecting...');
+          },
+          stompConnectHeaders: {'X-Authorization': 'Bearer $token'},
+          webSocketConnectHeaders: {'X-Authorization': 'Bearer $token'},
           onStompError: (frame) {
             print('Stomp error: ${frame.body}');
           },
@@ -27,7 +38,7 @@ class StompClientNotifier extends ChangeNotifier{
           onDisconnect: (frame) {
             print('Disconnected: ${frame.body}');
           },
-          reconnectDelay: const Duration(seconds: 5),
+          reconnectDelay: const Duration(seconds: 60),
         ),
       );
 
@@ -38,16 +49,11 @@ class StompClientNotifier extends ChangeNotifier{
   void _onStompConnected(StompFrame frame) {
     print('Connected to WebSocket');
     _subscribeToWs();
-
-    _stompClient?.send(
-      destination: '/app/v1/add-user',
-      body: jsonEncode({"username": username}),
-    );
   }
 
   void _subscribeToWs() {
     _stompClient?.subscribe(
-      destination: '/user/$username/topic/messages',
+      destination: '/user/topic/messages',
       callback: (frame) {
         if (frame.body != null) {
           print('Message received: ${frame.body}');

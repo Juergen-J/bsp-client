@@ -51,6 +51,7 @@ class _MessagesPageState extends State<MessagesPage> {
           _conversations = data
               .map((item) => {
                     'chatId': item['chatId'],
+                    'chatName': item['chatName'],
                     'countUnreadMessages': item['countUnreadMessages'],
                     'lastMessage': item['lastMessage'],
                     'lastMessageDate': item['lastMessageDate'],
@@ -93,6 +94,7 @@ class _MessagesPageState extends State<MessagesPage> {
           _messages = data
               .map((item) => {
                     'messageId': item['messageId'],
+                    'userId': item['userId'],
                     'username': item['username'],
                     'chatId': item['chatId'],
                     'message': item['message'],
@@ -275,7 +277,7 @@ class _MessagesPageState extends State<MessagesPage> {
             itemBuilder: (context, index) {
               var userInfo = Provider.of<AppState>(context).userInfo;
               final message = _messages[index];
-              final isCurrentUser = message['username'] == userInfo!.subject;
+              final isCurrentUser = message['userId'] == userInfo!.subject;
 
               return Container(
                 alignment: isCurrentUser

@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:berlin_service_portal/services/openid_browser.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/src/client.dart' as oidc;
 import 'package:openid_client/openid_client.dart';
 import 'dart:html' as html;
+import 'package:http/http.dart' as http;
 import 'openid_io.dart' if (dart.library.html) 'openid_browser.dart';
 
-const keycloakUri = 'http://localhost:8080/realms/berlin-service-portal';
+const keycloakUri = 'http://localhost:51242/realms/berlin-service-portal';
 const scopes = ['profile'];
 
 Credential? credential;
@@ -69,9 +71,26 @@ Future<void> logoutUser() async {
         request.send();
       }
     }
-
   } catch (e) {
     print('Logout error: $e');
     rethrow;
+  }
+}
+
+Future<http.Client?> getAccessTokenHttpClient() async {
+  if (credential != null) {
+    return credential!.createHttpClient();
+  }
+  print("Nullable credentials");
+  return null;
+}
+
+Future<String?> getToken() async {
+  if (credential != null) {
+    TokenResponse tokenResponse = await credential!.getTokenResponse();
+    print(tokenResponse.accessToken);
+    return tokenResponse.accessToken;
+  } else {
+    return null;
   }
 }

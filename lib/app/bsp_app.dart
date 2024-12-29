@@ -13,16 +13,13 @@ class BSPApp extends StatelessWidget {
     return Consumer<AppState>(builder: (context, appState, child) {
       return MaterialApp(
         title: 'BSP App',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-        ),
+        theme: appState.currentTheme,
         locale: appState.locale,
         localizationsDelegates: [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate
+          GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: appState.supportedLocales,
         home: MainPage(),

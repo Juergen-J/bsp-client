@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
+import 'package:openid_client/openid_client.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import '../services/openid_client.dart';
 
@@ -10,6 +11,12 @@ class StompClientNotifier extends ChangeNotifier {
 
   StompClient? _stompClient;
   String message = '';
+  String? userId;
+
+  Future<void> getCurrentUserId() async {
+    UserInfo? userInfo = await getUserInfo();
+    userId = userInfo?.subject;
+  }
 
   void connectStompClient() async {
     final String? token = await getToken();
@@ -44,6 +51,7 @@ class StompClientNotifier extends ChangeNotifier {
 
       _stompClient?.activate();
     }
+    await getCurrentUserId();
   }
 
   void _onStompConnected(StompFrame frame) {
@@ -77,3 +85,4 @@ class StompClientNotifier extends ChangeNotifier {
     );
   }
 }
+

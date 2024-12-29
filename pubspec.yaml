@@ -20,6 +20,7 @@ dependencies:
   url_launcher: ^6.3.1
   dio: ^5.7.0
   stomp_dart_client: ^2.1.0
+  scrollview_observer: ^1.24.0
 
 dev_dependencies:
   flutter_test:

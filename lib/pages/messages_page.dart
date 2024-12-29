@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:scrollview_observer/scrollview_observer.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'dart:convert';
 import '../app/app_state.dart';
@@ -15,7 +17,9 @@ class MessagesPage extends StatefulWidget {
 }
 
 class _MessagesPageState extends State<MessagesPage> {
+  BuildContext? _listViewContext;
   late StompClient _stompClient;
+  final ScrollController _scrollControllerMessage = ScrollController();
   final TextEditingController _controller = TextEditingController();
   final String _host = FlavorConfig.instance.variables['beHost'];
 
@@ -30,6 +34,27 @@ class _MessagesPageState extends State<MessagesPage> {
     super.initState();
     _fetchConversations();
     _newConnectStompClient();
+  }
+
+  Future<void> _markAsViewed(String? chatId, List<String> messageIds) async {
+    try {
+      final httpClient = await getAccessTokenHttpClient();
+      if (httpClient == null) {
+        print('HTTP client is null. Authentication might have failed.');
+        return;
+      }
+
+      final response = await httpClient.put(
+          Uri.parse('http://$_host/v1/chat/$chatId/message/mark-as-viewed'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(messageIds));
+      if (response.statusCode == 204) {
+      } else {
+        print('Error : $response');
+      }
+    } catch (e) {
+      print('Error marked messages as viewed: $e');
+    }
   }
 
   Future<void> _fetchConversations() async {
@@ -74,6 +99,11 @@ class _MessagesPageState extends State<MessagesPage> {
       setState(() {
         final message = jsonDecode(stompProvider.message);
         _messages.add(message);
+
+        if (message['userId'] == stompProvider.userId) {
+          _scrollDownChat();
+        }
+        _fetchConversations();
       });
     });
   }
@@ -98,8 +128,10 @@ class _MessagesPageState extends State<MessagesPage> {
                     'username': item['username'],
                     'chatId': item['chatId'],
                     'message': item['message'],
+                    'status': item['status'],
                   })
               .toList();
+          _scrollDownChat();
         });
       } else {
         print('Request failed with status code: ${response.statusCode}');
@@ -122,10 +154,24 @@ class _MessagesPageState extends State<MessagesPage> {
     }
   }
 
+  void _scrollDownChat() {
+    WidgetsBinding.instance
+        .addPostFrameCallback((_){
+      if (_scrollControllerMessage.hasClients) {
+        _scrollControllerMessage.animateTo(
+          _scrollControllerMessage.position.maxScrollExtent,
+          duration: Duration(microseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
     _stompClient.deactivate();
     _controller.dispose();
+    _scrollControllerMessage.dispose();
     super.dispose();
   }
 
@@ -272,35 +318,52 @@ class _MessagesPageState extends State<MessagesPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: ListView.builder(
-            itemCount: _messages.length,
-            itemBuilder: (context, index) {
-              var userInfo = Provider.of<AppState>(context).userInfo;
-              final message = _messages[index];
-              final isCurrentUser = message['userId'] == userInfo!.subject;
-
-              return Container(
-                alignment: isCurrentUser
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
-                margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isCurrentUser
-                        ? Colors.blueAccent
-                        : Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    message['message'] ?? '',
-                    style: TextStyle(
-                      color: isCurrentUser ? Colors.white : Colors.black,
+          child: ListViewObserver(
+            onObserve: (resultMap) {
+              List<String> unreadMessagesId = [];
+              var items = resultMap.displayingChildModelList;
+              for (var item in items) {
+                if (_messages[item.index]["status"] == "CREATED") {
+                  unreadMessagesId.add(_messages[item.index]["messageId"]);
+                  _messages[item.index]["status"] = "VIEWED";
+                }
+              }
+              if (unreadMessagesId.isNotEmpty) {
+                _markAsViewed(_selectedChatId, unreadMessagesId);
+                _fetchConversations();
+              }
+            },
+            child: ListView.builder(
+              controller: _scrollControllerMessage,
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                _listViewContext = context;
+                var userInfo = Provider.of<AppState>(context).userInfo;
+                final message = _messages[index];
+                final isCurrentUser = message['userId'] == userInfo!.subject;
+                return Container(
+                  alignment: isCurrentUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isCurrentUser
+                          ? Colors.blueAccent
+                          : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      message['message'] ?? '',
+                      style: TextStyle(
+                        color: isCurrentUser ? Colors.white : Colors.black,
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
         Row(

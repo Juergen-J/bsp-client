@@ -132,6 +132,8 @@ class _MessagesPageState extends State<MessagesPage> {
                   })
               .toList();
           _scrollDownChat();
+          _runManualListObserve();
+
         });
       } else {
         print('Request failed with status code: ${response.statusCode}');
@@ -164,6 +166,13 @@ class _MessagesPageState extends State<MessagesPage> {
           curve: Curves.easeOut,
         );
       }
+    });
+  }
+
+  void _runManualListObserve() {
+    WidgetsBinding.instance
+        .addPostFrameCallback((_){
+      ListViewOnceObserveNotification().dispatch(_listViewContext);
     });
   }
 

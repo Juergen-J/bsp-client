@@ -19,6 +19,7 @@ class StompClientNotifier extends ChangeNotifier {
   }
 
   void connectStompClient() async {
+    userId = null;
     final String? token = await getToken();
     if (token == null) {
       throw Exception("Token not found");

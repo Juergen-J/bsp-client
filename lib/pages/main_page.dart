@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../app/app_state.dart';
 import 'home_page.dart';
@@ -14,6 +13,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   var selectedIndex = 0;
   final GlobalKey _avatarKey = GlobalKey();
+  bool isMessagesWindowOpen = false;
 
   @override
   Widget build(BuildContext context) {
@@ -68,27 +68,47 @@ class _MainPageState extends State<MainPage> {
               ),
             ),
           ),
-          body: Center(
-            child: Container(
-              width: contentWidth,
-              child: constraints.maxWidth < 450
-                  ? Column(
-                      children: [
-                        Expanded(child: _buildMainArea(colorScheme, page)),
-                        SafeArea(
-                          child: _buildBottomNavigationBar(context),
+          body: Stack(
+            children: [
+              Center(
+                child: Container(
+                  width: contentWidth,
+                  child: constraints.maxWidth < 450
+                      ? Column(
+                          children: [
+                            Expanded(child: _buildMainArea(colorScheme, page)),
+                            SafeArea(
+                              child: _buildBottomNavigationBar(context),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            _buildNavigationRail(constraints),
+                            VerticalDivider(thickness: 1, width: 1),
+                            Expanded(child: _buildMainArea(colorScheme, page)),
+                          ],
                         ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        _buildNavigationRail(constraints),
-                        VerticalDivider(thickness: 1, width: 1),
-                        Expanded(child: _buildMainArea(colorScheme, page)),
-                      ],
-                    ),
-            ),
+                ),
+              ),
+              if (constraints.maxWidth >= 450 && isMessagesWindowOpen)
+                Positioned(
+                  right: 16,
+                  bottom: 80,
+                  child: _buildFloatingMessagesWindow(),
+                ),
+            ],
           ),
+          floatingActionButton: constraints.maxWidth >= 450
+              ? FloatingActionButton(
+                  onPressed: () {
+                    setState(() {
+                      isMessagesWindowOpen = !isMessagesWindowOpen;
+                    });
+                  },
+                  child: Icon(Icons.message),
+                )
+              : null,
         );
       },
     );
@@ -96,7 +116,7 @@ class _MainPageState extends State<MainPage> {
 
   Widget _buildMainArea(ColorScheme colorScheme, Widget page) {
     return ColoredBox(
-      color: colorScheme.surfaceVariant,
+      color: colorScheme.surfaceContainerHighest,
       child: AnimatedSwitcher(
         duration: Duration(milliseconds: 200),
         child: page,
@@ -117,7 +137,7 @@ class _MainPageState extends State<MainPage> {
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),
-          label: AppLocalizations.of(context)!.hello("boris"),
+          label: 'Settings',
         ),
       ],
       currentIndex: selectedIndex,
@@ -152,6 +172,26 @@ class _MainPageState extends State<MainPage> {
           selectedIndex = value;
         });
       },
+    );
+  }
+
+  Widget _buildFloatingMessagesWindow() {
+    return Positioned(
+      right: 16,
+      bottom: 80,
+      child: Material(
+        elevation: 8,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 300,
+          height: 400,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: MessagesPage(),
+        ),
+      ),
     );
   }
 

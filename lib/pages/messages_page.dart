@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -13,10 +12,10 @@ import '../app/stomp_client_notifier.dart';
 
 class MessagesPage extends StatefulWidget {
   @override
-  _MessagesPageState createState() => _MessagesPageState();
+  MessagesPageState createState() => MessagesPageState();
 }
 
-class _MessagesPageState extends State<MessagesPage> {
+class MessagesPageState extends State<MessagesPage> {
   BuildContext? _listViewContext;
   late StompClient _stompClient;
   final ScrollController _scrollControllerMessage = ScrollController();
@@ -26,12 +25,14 @@ class _MessagesPageState extends State<MessagesPage> {
   List<Map<String, dynamic>> _conversations = [];
   String? _selectedChatId;
   List<Map<String, dynamic>> _messages = [];
+  int _messagePage = 0;
   bool _showMessagesOnly = false;
   late StompClientNotifier stompProvider;
 
   @override
   void initState() {
     super.initState();
+    _scrollControllerMessage.addListener(_scrollMessageListener);
     _fetchConversations();
     _newConnectStompClient();
   }
@@ -91,19 +92,35 @@ class _MessagesPageState extends State<MessagesPage> {
     }
   }
 
+  void _scrollMessageListener() {
+    if (_scrollControllerMessage.position.pixels == _scrollControllerMessage.position.minScrollExtent) {
+      _messagePage = _messagePage + 1;
+      _fetchMessages();
+    }
+  }
+
   void _newConnectStompClient() {
     stompProvider = Provider.of<StompClientNotifier>(context, listen: false);
     stompProvider.connectStompClient();
     stompProvider.addListener(() {
       print('Message added: ${stompProvider.message}');
+      print('Report added: ${stompProvider.report}');
       setState(() {
-        final message = jsonDecode(stompProvider.message);
-        _messages.add(message);
+        if (stompProvider.message != '') {
+          final message = jsonDecode(stompProvider.message);
+          _messages.add(message);
 
-        if (message['userId'] == stompProvider.userId) {
-          _scrollDownChat();
+          if (message['userId'] == stompProvider.userId) {
+            _scrollDownChat();
+          }
+          _fetchConversations();
+          _runManualListObserve();
         }
-        _fetchConversations();
+        if (stompProvider.report != '') {
+          final report = jsonDecode(stompProvider.report);
+          _fetchConversations();
+        }
+
       });
     });
   }
@@ -116,24 +133,25 @@ class _MessagesPageState extends State<MessagesPage> {
         return;
       }
       final response = await httpClient
-          .get(Uri.parse('http://$_host/v1/chat/$_selectedChatId/message'));
+          .get(Uri.parse('http://$_host/v1/chat/$_selectedChatId/message?page=$_messagePage'));
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final data = jsonData['content'] as List;
         setState(() {
-          _messages = data
-              .map((item) => {
-                    'messageId': item['messageId'],
-                    'userId': item['userId'],
-                    'username': item['username'],
-                    'chatId': item['chatId'],
-                    'message': item['message'],
-                    'status': item['status'],
-                  })
-              .toList();
-          _scrollDownChat();
+          for(final item in data){
+            _messages.insert(0, {
+              'messageId': item['messageId'],
+              'userId': item['userId'],
+              'username': item['username'],
+              'chatId': item['chatId'],
+              'message': item['message'],
+              'status': item['status'],
+            });
+          }
+          if (_messagePage == 0) {
+            _scrollDownChat();
+          }
           _runManualListObserve();
-
         });
       } else {
         print('Request failed with status code: ${response.statusCode}');
@@ -172,6 +190,7 @@ class _MessagesPageState extends State<MessagesPage> {
   void _runManualListObserve() {
     WidgetsBinding.instance
         .addPostFrameCallback((_){
+          print("attempt ${DateTime.now()}");
       ListViewOnceObserveNotification().dispatch(_listViewContext);
     });
   }
@@ -180,6 +199,7 @@ class _MessagesPageState extends State<MessagesPage> {
   void dispose() {
     _stompClient.deactivate();
     _controller.dispose();
+    _scrollControllerMessage.removeListener(_scrollMessageListener);
     _scrollControllerMessage.dispose();
     super.dispose();
   }
@@ -310,6 +330,8 @@ class _MessagesPageState extends State<MessagesPage> {
               onTap: () {
                 setState(() {
                   _selectedChatId = conversation['chatId'];
+                  _messages = [];
+                  _messagePage = 0;
                   _fetchMessages();
                   _showMessagesOnly = true;
                 });
@@ -329,6 +351,7 @@ class _MessagesPageState extends State<MessagesPage> {
         Expanded(
           child: ListViewObserver(
             onObserve: (resultMap) {
+              print("observe ${DateTime.now()}");
               List<String> unreadMessagesId = [];
               var items = resultMap.displayingChildModelList;
               for (var item in items) {

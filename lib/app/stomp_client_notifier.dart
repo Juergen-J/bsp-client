@@ -10,6 +10,7 @@ class StompClientNotifier extends ChangeNotifier {
   final String _host = FlavorConfig.instance.variables['beHost'];
 
   StompClient? _stompClient;
+  String report = '';
   String message = '';
   String? userId;
 
@@ -57,16 +58,32 @@ class StompClientNotifier extends ChangeNotifier {
 
   void _onStompConnected(StompFrame frame) {
     print('Connected to WebSocket');
-    _subscribeToWs();
+    _subscribeToMessageWs();
+    _subscribeToReportWs();
   }
 
-  void _subscribeToWs() {
+  void _subscribeToMessageWs() {
     _stompClient?.subscribe(
       destination: '/user/topic/messages',
       callback: (frame) {
         if (frame.body != null) {
           print('Message received: ${frame.body}');
           message = frame.body!;
+          report = '';
+          notifyListeners();
+        }
+      },
+    );
+  }
+
+  void _subscribeToReportWs() {
+    _stompClient?.subscribe(
+      destination: '/user/topic/message-reports',
+      callback: (frame) {
+        if (frame.body != null) {
+          print('Message received: ${frame.body}');
+          report = frame.body!;
+          message = '';
           notifyListeners();
         }
       },

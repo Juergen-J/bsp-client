@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
+import 'package:openid_client/openid_client.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import '../services/openid_client.dart';
 
@@ -9,9 +10,17 @@ class StompClientNotifier extends ChangeNotifier {
   final String _host = FlavorConfig.instance.variables['beHost'];
 
   StompClient? _stompClient;
+  String report = '';
   String message = '';
+  String? userId;
+
+  Future<void> getCurrentUserId() async {
+    UserInfo? userInfo = await getUserInfo();
+    userId = userInfo?.subject;
+  }
 
   void connectStompClient() async {
+    userId = null;
     final String? token = await getToken();
     if (token == null) {
       throw Exception("Token not found");
@@ -44,20 +53,37 @@ class StompClientNotifier extends ChangeNotifier {
 
       _stompClient?.activate();
     }
+    await getCurrentUserId();
   }
 
   void _onStompConnected(StompFrame frame) {
     print('Connected to WebSocket');
-    _subscribeToWs();
+    _subscribeToMessageWs();
+    _subscribeToReportWs();
   }
 
-  void _subscribeToWs() {
+  void _subscribeToMessageWs() {
     _stompClient?.subscribe(
       destination: '/user/topic/messages',
       callback: (frame) {
         if (frame.body != null) {
           print('Message received: ${frame.body}');
           message = frame.body!;
+          report = '';
+          notifyListeners();
+        }
+      },
+    );
+  }
+
+  void _subscribeToReportWs() {
+    _stompClient?.subscribe(
+      destination: '/user/topic/message-reports',
+      callback: (frame) {
+        if (frame.body != null) {
+          print('Message received: ${frame.body}');
+          report = frame.body!;
+          message = '';
           notifyListeners();
         }
       },
@@ -77,3 +103,4 @@ class StompClientNotifier extends ChangeNotifier {
     );
   }
 }
+

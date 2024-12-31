@@ -7,7 +7,6 @@ import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'dart:convert';
 import '../app/app_state.dart';
 import '../services/openid_client.dart';
-
 import '../app/stomp_client_notifier.dart';
 
 class MessagesPage extends StatefulWidget {
@@ -72,7 +71,6 @@ class MessagesPageState extends State<MessagesPage> {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final data = jsonData['content'] as List;
-        print('Data: $data');
         setState(() {
           _conversations = data
               .map((item) => {
@@ -93,7 +91,8 @@ class MessagesPageState extends State<MessagesPage> {
   }
 
   void _scrollMessageListener() {
-    if (_scrollControllerMessage.position.pixels == _scrollControllerMessage.position.minScrollExtent) {
+    if (_scrollControllerMessage.position.pixels ==
+        _scrollControllerMessage.position.minScrollExtent) {
       _messagePage = _messagePage + 1;
       _fetchMessages();
     }
@@ -120,7 +119,6 @@ class MessagesPageState extends State<MessagesPage> {
           final report = jsonDecode(stompProvider.report);
           _fetchConversations();
         }
-
       });
     });
   }
@@ -132,13 +130,13 @@ class MessagesPageState extends State<MessagesPage> {
         print('HTTP client is null. Authentication might have failed.');
         return;
       }
-      final response = await httpClient
-          .get(Uri.parse('http://$_host/v1/chat/$_selectedChatId/message?page=$_messagePage'));
+      final response = await httpClient.get(Uri.parse(
+          'http://$_host/v1/chat/$_selectedChatId/message?page=$_messagePage'));
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final data = jsonData['content'] as List;
         setState(() {
-          for(final item in data){
+          for (final item in data) {
             _messages.insert(0, {
               'messageId': item['messageId'],
               'userId': item['userId'],
@@ -175,8 +173,7 @@ class MessagesPageState extends State<MessagesPage> {
   }
 
   void _scrollDownChat() {
-    WidgetsBinding.instance
-        .addPostFrameCallback((_){
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollControllerMessage.hasClients) {
         _scrollControllerMessage.animateTo(
           _scrollControllerMessage.position.maxScrollExtent,
@@ -188,9 +185,8 @@ class MessagesPageState extends State<MessagesPage> {
   }
 
   void _runManualListObserve() {
-    WidgetsBinding.instance
-        .addPostFrameCallback((_){
-          print("attempt ${DateTime.now()}");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print("attempt ${DateTime.now()}");
       ListViewOnceObserveNotification().dispatch(_listViewContext);
     });
   }
@@ -205,14 +201,12 @@ class MessagesPageState extends State<MessagesPage> {
   }
 
   String calculateConversationDate(String? conversationDateFromMessage) {
-    if (conversationDateFromMessage == null) {
-      return '';
-    }
+    if (conversationDateFromMessage == null) return '';
     DateTime conversationDate;
     try {
       conversationDate = DateTime.parse(conversationDateFromMessage);
     } catch (e) {
-      return 'Error by date parse';
+      return 'Invalid date';
     }
 
     DateTime now = DateTime.now();
@@ -231,7 +225,7 @@ class MessagesPageState extends State<MessagesPage> {
 
     DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     if (conversationDate.isAfter(startOfWeek)) {
-      return DateFormat('EEEE', 'en_EN').format(conversationDate);
+      return DateFormat('EEEE').format(conversationDate);
     }
 
     return DateFormat('dd.MM.yyyy').format(conversationDate);
@@ -239,7 +233,9 @@ class MessagesPageState extends State<MessagesPage> {
 
   @override
   Widget build(BuildContext context) {
+    var colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colorScheme.background,
       appBar: AppBar(
         title: const Text("Messages"),
         leading: _showMessagesOnly
@@ -256,20 +252,18 @@ class MessagesPageState extends State<MessagesPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 450) {
-            if (_showMessagesOnly) {
-              return _buildMessagesView();
-            } else {
-              return _buildConversationsView();
-            }
+            return _showMessagesOnly
+                ? _buildMessagesView(colorScheme)
+                : _buildConversationsView(colorScheme);
           } else {
             return Row(
               children: [
                 Container(
                   width: 300,
-                  color: Colors.grey[200],
-                  child: _buildConversationsView(),
+                  color: colorScheme.surfaceContainerHighest,
+                  child: _buildConversationsView(colorScheme),
                 ),
-                Expanded(child: _buildMessagesView()),
+                Expanded(child: _buildMessagesView(colorScheme)),
               ],
             );
           }
@@ -278,146 +272,162 @@ class MessagesPageState extends State<MessagesPage> {
     );
   }
 
-  Widget _buildConversationsView() {
+  Widget _buildConversationsView(ColorScheme colorScheme) {
     return ListView.builder(
       itemCount: _conversations.length,
       itemBuilder: (context, index) {
         final conversation = _conversations[index];
         final countUnreadMessages = conversation['countUnreadMessages'] ?? 0;
-        return MouseRegion(
-          onEnter: (_) => setState(() {}),
-          onExit: (_) => setState(() {}),
-          child: Card(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            child: ListTile(
-              leading: Stack(children: [
+
+        return Card(
+          color: colorScheme.surface,
+          child: ListTile(
+            leading: Stack(
+              children: [
                 CircleAvatar(
-                  radius: 24,
-                  backgroundColor: Colors.grey[300],
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.grey[700],
-                  ),
+                  backgroundColor: colorScheme.primary,
+                  child: Icon(Icons.person, color: colorScheme.onPrimary),
                 ),
                 if (countUnreadMessages > 0)
                   Positioned(
                     right: 0,
                     top: 0,
                     child: Container(
-                      padding: EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(12)),
-                      constraints: BoxConstraints(minWidth: 18, minHeight: 18),
+                        color: colorScheme.error,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Text(
-                        countUnreadMessages.toString(),
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                        textAlign: TextAlign.center,
+                        '$countUnreadMessages',
+                        style: TextStyle(color: colorScheme.onError),
                       ),
                     ),
-                  )
-              ]),
-              title: Text(
-                conversation['chatName'] ?? 'No name',
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(conversation['lastMessage'] ?? 'No message'),
-              trailing: Text(
-                  calculateConversationDate(conversation['lastMessageDate'])),
-              onTap: () {
-                setState(() {
-                  _selectedChatId = conversation['chatId'];
-                  _messages = [];
-                  _messagePage = 0;
-                  _fetchMessages();
-                  _showMessagesOnly = true;
-                });
-              },
-              selected: _selectedChatId == conversation['chatId'],
+                  ),
+              ],
             ),
+            title: Text(
+              conversation['chatName'] ?? 'No name',
+              style: TextStyle(color: colorScheme.onSurface),
+            ),
+            subtitle: Text(
+              conversation['lastMessage'] ?? 'No message',
+              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
+            ),
+            onTap: () {
+              setState(() {
+                _selectedChatId = conversation['chatId'];
+                _messages = [];
+                _messagePage = 0;
+                _fetchMessages();
+                _showMessagesOnly = true;
+              });
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildMessagesView() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: ListViewObserver(
-            onObserve: (resultMap) {
-              print("observe ${DateTime.now()}");
-              List<String> unreadMessagesId = [];
-              var items = resultMap.displayingChildModelList;
-              for (var item in items) {
-                if (_messages[item.index]["status"] == "CREATED") {
-                  unreadMessagesId.add(_messages[item.index]["messageId"]);
-                  _messages[item.index]["status"] = "VIEWED";
-                }
-              }
-              if (unreadMessagesId.isNotEmpty) {
-                _markAsViewed(_selectedChatId, unreadMessagesId);
-                _fetchConversations();
-              }
-            },
-            child: ListView.builder(
-              controller: _scrollControllerMessage,
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                _listViewContext = context;
-                var userInfo = Provider.of<AppState>(context).userInfo;
-                final message = _messages[index];
-                final isCurrentUser = message['userId'] == userInfo!.subject;
-                return Container(
-                  alignment: isCurrentUser
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isCurrentUser
-                          ? Colors.blueAccent
-                          : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      message['message'] ?? '',
-                      style: TextStyle(
-                        color: isCurrentUser ? Colors.white : Colors.black,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _controller,
-                minLines: 1,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Send a message',
-                  border: OutlineInputBorder(),
+  Widget _buildMessagesView(ColorScheme colorScheme) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [colorScheme.secondaryContainer, colorScheme.surface],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
                 ),
               ),
+              child: ListViewObserver(
+                onObserve: (resultMap) {
+                  print("observe ${DateTime.now()}");
+                  List<String> unreadMessagesId = [];
+                  var items = resultMap.displayingChildModelList;
+                  for (var item in items) {
+                    if (_messages[item.index]["status"] == "CREATED") {
+                      unreadMessagesId.add(_messages[item.index]["messageId"]);
+                      _messages[item.index]["status"] = "VIEWED";
+                    }
+                  }
+                  if (unreadMessagesId.isNotEmpty) {
+                    _markAsViewed(_selectedChatId, unreadMessagesId);
+                    _fetchConversations();
+                  }
+                },
+                child: _messages.isNotEmpty
+                    ? ListView.builder(
+                        controller: _scrollControllerMessage,
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          _listViewContext = context;
+                          var userInfo =
+                              Provider.of<AppState>(context).userInfo;
+                          final message = _messages[index];
+                          final isCurrentUser =
+                              message['userId'] == userInfo!.subject;
+                          return Container(
+                            alignment: isCurrentUser
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            margin: EdgeInsets.symmetric(
+                                vertical: 5, horizontal: 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isCurrentUser
+                                    ? colorScheme.primaryContainer
+                                    : colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                message['message'] ?? '',
+                                style: TextStyle(
+                                  color: isCurrentUser
+                                      ? colorScheme.onPrimaryContainer
+                                      : colorScheme.onSecondaryContainer,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          'No messages yet',
+                          style: TextStyle(
+                            color: colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: _sendMessage,
-            ),
-          ],
-        ),
-      ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _controller,
+                  minLines: 1,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    labelText: 'Send a message',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: _sendMessage,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

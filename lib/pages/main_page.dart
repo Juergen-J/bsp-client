@@ -259,23 +259,24 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // todo
   void _showSearchDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Поиск'),
+          title: Text('Search'),
           content: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Введите запрос...',
+              hintText: 'Enter your request...',
               border: OutlineInputBorder(),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Закрыть'),
+              child: Text('Close'),
             ),
           ],
         );

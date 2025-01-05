@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../app/app_state.dart';
 import 'home_page.dart';
 import '../pages/messages_page.dart';
-import '../pages/settings_page.dart';
+import '../pages/profile_page.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -14,6 +14,7 @@ class _MainPageState extends State<MainPage> {
   var selectedIndex = 0;
   final GlobalKey _avatarKey = GlobalKey();
   bool isMessagesWindowOpen = false;
+  TextEditingController _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +27,13 @@ class _MainPageState extends State<MainPage> {
         page = HomePage();
         break;
       case 1:
-        page = MessagesPage();
+        page = Placeholder();
         break;
       case 2:
-        page = SettingsPage();
+        page = MessagesPage();
+        break;
+      case 3:
+        page = ProfilePage();
         break;
       default:
         throw UnimplementedError('No widget for $selectedIndex');
@@ -126,18 +130,23 @@ class _MainPageState extends State<MainPage> {
 
   Widget _buildBottomNavigationBar(BuildContext context) {
     return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
       items: [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.favorite),
+          label: 'Favorites',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.message),
           label: 'Messages',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Settings',
+          icon: Icon(Icons.person),
+          label: 'Me',
         ),
       ],
       currentIndex: selectedIndex,
@@ -156,6 +165,10 @@ class _MainPageState extends State<MainPage> {
         NavigationRailDestination(
           icon: Icon(Icons.home),
           label: Text('Home'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.favorite),
+          label: Text('Favorites'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.message),

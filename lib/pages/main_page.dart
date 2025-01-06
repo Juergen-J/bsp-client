@@ -1,9 +1,9 @@
+import 'package:berlin_service_portal/pages/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app/app_state.dart';
 import 'home_page.dart';
 import '../pages/messages_page.dart';
-import '../pages/settings_page.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -14,11 +14,13 @@ class _MainPageState extends State<MainPage> {
   var selectedIndex = 0;
   final GlobalKey _avatarKey = GlobalKey();
   bool isMessagesWindowOpen = false;
+  TextEditingController _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     var colorScheme = Theme.of(context).colorScheme;
     var appState = Provider.of<AppState>(context);
+    var isMobile = MediaQuery.of(context).size.width < 600;
 
     Widget page;
     switch (selectedIndex) {
@@ -26,10 +28,13 @@ class _MainPageState extends State<MainPage> {
         page = HomePage();
         break;
       case 1:
-        page = MessagesPage();
+        page = Placeholder();
         break;
       case 2:
-        page = SettingsPage();
+        page = MessagesPage();
+        break;
+      case 3:
+        page = ProfilePage();
         break;
       default:
         throw UnimplementedError('No widget for $selectedIndex');
@@ -39,6 +44,7 @@ class _MainPageState extends State<MainPage> {
       builder: (context, constraints) {
         double contentWidth =
             constraints.maxWidth > 1200 ? 1200 : constraints.maxWidth;
+        double beforeSearchPadding = constraints.maxWidth > 800 ? 200 : 22;
 
         return Scaffold(
           appBar: PreferredSize(
@@ -47,8 +53,57 @@ class _MainPageState extends State<MainPage> {
               child: Container(
                 width: contentWidth,
                 child: AppBar(
-                  title: const Text("App"),
+                  leading: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      color: Colors.grey[300],
+                      child: Center(
+                        child: Text(
+                          'Logo',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  titleSpacing: 0,
+                  title: isMobile
+                      ? null
+                      : Row(
+                          children: [
+                            SizedBox(width: beforeSearchPadding),
+                            Expanded(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(maxWidth: 100),
+                                child: TextField(
+                                  controller: _searchController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Search...',
+                                    prefixIcon: Icon(Icons.search),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8.0),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    filled: true,
+                                    fillColor: colorScheme.secondaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                   actions: [
+                    if (isMobile)
+                      IconButton(
+                        icon: Icon(Icons.search),
+                        onPressed: () {
+                          _showSearchDialog(context);
+                        },
+                      ),
                     IconButton(
                       icon: Icon(appState.isDarkMode
                           ? Icons.dark_mode
@@ -126,18 +181,23 @@ class _MainPageState extends State<MainPage> {
 
   Widget _buildBottomNavigationBar(BuildContext context) {
     return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
       items: [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.favorite),
+          label: 'Favorites',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.message),
           label: 'Messages',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Settings',
+          icon: Icon(Icons.person),
+          label: 'Me',
         ),
       ],
       currentIndex: selectedIndex,
@@ -156,6 +216,10 @@ class _MainPageState extends State<MainPage> {
         NavigationRailDestination(
           icon: Icon(Icons.home),
           label: Text('Home'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.favorite),
+          label: Text('Favorites'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.message),
@@ -192,6 +256,31 @@ class _MainPageState extends State<MainPage> {
           child: MessagesPage(),
         ),
       ),
+    );
+  }
+
+  // todo
+  void _showSearchDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Search'),
+          content: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Enter your request...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 

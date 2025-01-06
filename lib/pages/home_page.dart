@@ -1,13 +1,10 @@
-import 'dart:convert';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:berlin_service_portal/services/openid_client.dart';
 
 import '../app/app_state.dart';
 import '../services/chat_service.dart';
+import 'open_map_page.dart';
 
 class HomePage extends StatelessWidget {
   @override
@@ -59,6 +56,11 @@ class HomePage extends StatelessWidget {
                       print('Authentication failed: $e');
                     }
                   }),
+            Container(
+              width: 500,
+              height: 500,
+              child: MapWithLocationPage(),
+            )
           ],
         ),
       )

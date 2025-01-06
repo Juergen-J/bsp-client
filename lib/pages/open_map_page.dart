@@ -13,13 +13,24 @@ class _MapWithLocationPageState extends State<MapWithLocationPage> {
   final GeolocatorPlatform _geolocatorPlatform = GeolocatorPlatform.instance;
   final MapController _mapController = MapController();
   LatLng? _currentLocation;
+  LatLng? _selectedLocation;
+
   bool _isCentered = false;
   StreamSubscription<Position>? _positionStreamSubscription;
 
   // todo get this from constructor
   late List<LatLng> _searchLocations = [
-    LatLng(52.399523, 13.394568),
-    LatLng(52.399123, 13.392168),
+    LatLng(52.399523, 13.394518),
+    LatLng(52.399534, 13.394528),
+    LatLng(52.399545, 13.394538),
+    LatLng(52.399556, 13.394548),
+    LatLng(52.399567, 13.394558),
+    LatLng(52.399578, 13.394568),
+    LatLng(52.399589, 13.394578),
+    LatLng(52.399594, 13.394589),
+    LatLng(52.399524, 13.394597),
+    LatLng(52.399514, 13.394606),
+    LatLng(52.399123, 13.392125),
   ];
 
   late List<Marker> _searchLocationsMarkers = [];
@@ -129,6 +140,11 @@ class _MapWithLocationPageState extends State<MapWithLocationPage> {
               });
             }
           },
+          onTap: (TapPosition tapPosition, LatLng point) {
+            setState(() {
+              _selectedLocation = point;
+            });
+          },
         ),
         children: [
           TileLayer(
@@ -149,6 +165,17 @@ class _MapWithLocationPageState extends State<MapWithLocationPage> {
                     size: 40,
                   ),
                 ),
+                if (_selectedLocation != null)
+                  Marker(
+                    point: _selectedLocation!,
+                    width: 40,
+                    height: 40,
+                    child: Icon(
+                      Icons.lens_sharp,
+                      color: Colors.blue,
+                      size: 40,
+                    ),
+                  ),
                 ..._searchLocationsMarkers
               ],
             ),

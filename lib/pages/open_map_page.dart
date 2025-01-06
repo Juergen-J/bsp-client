@@ -55,13 +55,10 @@ class _MapWithLocationPageState extends State<MapWithLocationPage> {
       _searchLocationsMarkers = _searchLocations.map((location) {
         return Marker(
           point: location,
+          child: Image.asset('assets/icons/map_point.png'),
           width: 30,
           height: 30,
-          child: Icon(
-            Icons.circle_outlined,
-            color: Colors.red,
-            size: 190,
-          ),
+          alignment: Alignment.center,
         );
       }).toList();
     });

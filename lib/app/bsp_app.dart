@@ -22,7 +22,7 @@ class BSPApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: appState.supportedLocales,
-        home: MainPage(),
+        home: const MainPage(),
       );
     });
   }

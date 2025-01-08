@@ -6,6 +6,8 @@ import 'home_page.dart';
 import '../pages/messages_page.dart';
 
 class MainPage extends StatefulWidget {
+  const MainPage({super.key});
+
   @override
   State<MainPage> createState() => _MainPageState();
 }
@@ -71,39 +73,7 @@ class _MainPageState extends State<MainPage> {
                     ),
                   ),
                   titleSpacing: 0,
-                  title: isMobile
-                      ? null
-                      : Row(
-                          children: [
-                            SizedBox(width: beforeSearchPadding),
-                            Expanded(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(maxWidth: 100),
-                                child: TextField(
-                                  controller: _searchController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Search...',
-                                    prefixIcon: Icon(Icons.search),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    filled: true,
-                                    fillColor: colorScheme.secondaryContainer,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                   actions: [
-                    if (isMobile)
-                      IconButton(
-                        icon: Icon(Icons.search),
-                        onPressed: () {
-                          _showSearchDialog(context);
-                        },
-                      ),
                     IconButton(
                       icon: Icon(appState.isDarkMode
                           ? Icons.dark_mode
@@ -256,31 +226,6 @@ class _MainPageState extends State<MainPage> {
           child: MessagesPage(),
         ),
       ),
-    );
-  }
-
-  // todo
-  void _showSearchDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Search'),
-          content: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Enter your request...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Close'),
-            ),
-          ],
-        );
-      },
     );
   }
 

@@ -33,9 +33,33 @@ class MessagesPageState extends State<MessagesPage> {
   void initState() {
     super.initState();
     _scrollControllerMessage.addListener(_scrollMessageListener);
+    _getMe();
     _fetchConversations();
     _newConnectStompClient();
   }
+
+  Future<void> _getMe() async {
+    try {
+      final httpClient = await getAccessTokenHttpClient();
+      if (httpClient == null) {
+        print('HTTP client is null. Authentication might have failed.');
+        return;
+      }
+
+      final response =
+      await httpClient.get(Uri.parse('http://$_host/v1/user-profile/me'));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        print(jsonData);
+      } else {
+        print('Request failed with status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching me: $e');
+    }
+  }
+
 
   Future<void> _markAsViewed(String? chatId, List<String> messageIds) async {
     try {

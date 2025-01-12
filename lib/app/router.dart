@@ -8,6 +8,7 @@ import '../pages/profile_page.dart';
 import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
+final GlobalKey avatarKey = GlobalKey();
 
 final GoRouter router = GoRouter(
   initialLocation: '/home',
@@ -16,7 +17,6 @@ final GoRouter router = GoRouter(
       builder: (context, state, navigationShell) {
         var colorScheme = Theme.of(context).colorScheme;
         var appState = Provider.of<AppState>(context);
-        final GlobalKey avatarKey = GlobalKey();
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -59,8 +59,7 @@ final GoRouter router = GoRouter(
                         ),
                         GestureDetector(
                           key: avatarKey,
-                          //onTap: ;,
-                          //_showContextMenu,
+                          onTap: () => _showContextMenu(context),
                           child: CircleAvatar(
                             child: Icon(Icons.person),
                           ),
@@ -83,6 +82,7 @@ final GoRouter router = GoRouter(
                                 Expanded(child: navigationShell),
                                 SafeArea(
                                   child: BottomNavigationBar(
+                                    type: BottomNavigationBarType.fixed,
                                     currentIndex: navigationShell.currentIndex,
                                     onTap: (index) =>
                                         navigationShell.goBranch(index),
@@ -97,8 +97,11 @@ final GoRouter router = GoRouter(
                                           icon: Icon(Icons.message),
                                           label: 'Messages'),
                                       BottomNavigationBarItem(
-                                          icon: Icon(Icons.person),
-                                          label: 'Me'),
+                                          icon: Icon(Icons.devices),
+                                          label: 'Devices'),
+                                      BottomNavigationBarItem(
+                                          icon: Icon(Icons.sell_rounded),
+                                          label: 'Services'),
                                     ],
                                   ),
                                 ),
@@ -125,9 +128,11 @@ final GoRouter router = GoRouter(
                                       label: Text('Messages'),
                                     ),
                                     NavigationRailDestination(
-                                      icon: Icon(Icons.settings),
-                                      label: Text('Settings'),
-                                    ),
+                                        icon: Icon(Icons.devices),
+                                        label: Text('Devices')),
+                                    NavigationRailDestination(
+                                        icon: Icon(Icons.sell_rounded),
+                                        label: Text('Services')),
                                   ],
                                   selectedIndex: navigationShell.currentIndex,
                                   onDestinationSelected: (index) =>
@@ -201,6 +206,24 @@ final GoRouter router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
+              path: '/devices',
+              name: 'devices',
+              builder: (context, state) => const Placeholder(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/services',
+              name: 'services',
+              builder: (context, state) => const Placeholder(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
               path: '/me',
               name: 'me',
               builder: (context, state) => const ProfilePage(),
@@ -229,5 +252,32 @@ Widget _buildFloatingMessagesWindow() {
         child: MessagesPage(),
       ),
     ),
+  );
+}
+
+void _showContextMenu(BuildContext context) {
+  final RenderBox avatarBox =
+      avatarKey.currentContext!.findRenderObject() as RenderBox;
+  final Offset avatarPosition = avatarBox.localToGlobal(Offset.zero);
+
+  showMenu(
+    context: context,
+    position: RelativeRect.fromLTRB(
+      avatarPosition.dx,
+      avatarPosition.dy + avatarBox.size.height,
+      avatarPosition.dx + avatarBox.size.width,
+      0,
+    ),
+    items: [
+      PopupMenuItem(
+        child: Text("Profile"),
+        onTap: () {
+          Future.microtask(() => context.push('/me'));
+        },
+      ),
+      PopupMenuItem(
+        child: Text("Logout"),
+      ),
+    ],
   );
 }

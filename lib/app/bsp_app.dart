@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import '../pages/main_page.dart';
 import 'app_state.dart';
+import 'router.dart';
 
 class BSPApp extends StatelessWidget {
   const BSPApp({super.key});
@@ -11,8 +11,8 @@ class BSPApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, appState, child) {
-      return MaterialApp(
-        title: 'BSP App',
+      return MaterialApp.router(
+        title: 'Tittle App',
         theme: appState.currentTheme,
         locale: appState.locale,
         localizationsDelegates: [
@@ -22,7 +22,7 @@ class BSPApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: appState.supportedLocales,
-        home: const MainPage(),
+        routerConfig: router,
       );
     });
   }

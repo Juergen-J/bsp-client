@@ -2,7 +2,7 @@ import 'package:berlin_service_portal/pages/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app/app_state.dart';
-import 'home_page.dart';
+import '../pages/home_page.dart';
 import '../pages/messages_page.dart';
 
 class MainPage extends StatefulWidget {

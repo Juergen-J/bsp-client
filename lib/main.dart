@@ -2,6 +2,7 @@ import 'package:berlin_service_portal/services/openid_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';
+import 'package:url_strategy/url_strategy.dart';
 import 'app/app_state.dart';
 import 'app/bsp_app.dart';
 import 'app/stomp_client_notifier.dart';
@@ -14,6 +15,7 @@ void main() async {
       color: Colors.red,
       location: BannerLocation.bottomEnd,
       variables: {"beHost": "localhost:8090"});
+  setPathUrlStrategy();
   runApp(MultiProvider(providers: [
     ChangeNotifierProvider(create: (_) => AppState(userInfo: userInfo)),
     ChangeNotifierProvider(create: (_) => StompClientNotifier())

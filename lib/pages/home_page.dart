@@ -7,6 +7,8 @@ import '../services/chat_service.dart';
 import 'open_map_page.dart';
 
 class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     var userInfo = Provider.of<AppState>(context).userInfo;

@@ -10,6 +10,7 @@ import '../services/openid_client.dart';
 import '../app/stomp_client_notifier.dart';
 
 class MessagesPage extends StatefulWidget {
+  const MessagesPage({super.key});
   @override
   MessagesPageState createState() => MessagesPageState();
 }

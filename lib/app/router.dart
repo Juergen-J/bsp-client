@@ -83,7 +83,9 @@ final GoRouter router = GoRouter(
                                 SafeArea(
                                   child: BottomNavigationBar(
                                     type: BottomNavigationBarType.fixed,
-                                    currentIndex: navigationShell.currentIndex,
+                                    // todo selected index by /me path???
+                                    currentIndex: _getSelectedIndex(context) ?? -1,
+                                    // currentIndex: navigationShell.currentIndex,
                                     onTap: (index) =>
                                         navigationShell.goBranch(index),
                                     items: const [
@@ -134,7 +136,7 @@ final GoRouter router = GoRouter(
                                         icon: Icon(Icons.sell_rounded),
                                         label: Text('Services')),
                                   ],
-                                  selectedIndex: navigationShell.currentIndex,
+                                  selectedIndex: _getSelectedIndex(context),
                                   onDestinationSelected: (index) =>
                                       navigationShell.goBranch(index),
                                 ),
@@ -235,6 +237,26 @@ final GoRouter router = GoRouter(
   ],
 );
 
+int? _getSelectedIndex(BuildContext context) {
+  final location =
+      GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+
+  switch (location) {
+    case '/home':
+      return 0;
+    case '/favorites':
+      return 1;
+    case '/messages':
+      return 2;
+    case '/devices':
+      return 3;
+    case '/services':
+      return 4;
+    default:
+      return null;
+  }
+}
+
 Widget _buildFloatingMessagesWindow() {
   return Positioned(
     right: 16,
@@ -272,7 +294,7 @@ void _showContextMenu(BuildContext context) {
       PopupMenuItem(
         child: Text("Profile"),
         onTap: () {
-          Future.microtask(() => context.push('/me'));
+          Future.microtask(() => context.pushReplacement('/me'));
         },
       ),
       PopupMenuItem(

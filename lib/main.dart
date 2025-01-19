@@ -1,4 +1,4 @@
-import 'package:berlin_service_portal/services/openid_client.dart';
+import 'package:berlin_service_portal/service/openid_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';

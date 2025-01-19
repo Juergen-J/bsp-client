@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:openid_client/openid_client.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
-import '../services/openid_client.dart';
+import '../service/openid_client.dart';
 
 class StompClientNotifier extends ChangeNotifier {
   final String _host = FlavorConfig.instance.variables['beHost'];

@@ -89,7 +89,7 @@ class _MapWithLocationPageState extends State<MapWithLocationPage> {
     bool serviceEnabled = await _geolocatorPlatform.isLocationServiceEnabled();
     if (!serviceEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Location services are turned off.')),
+        SnackBar(content: Text('Location service are turned off.')),
       );
       return false;
     }

@@ -1,9 +1,9 @@
-import 'package:berlin_service_portal/pages/profile_page.dart';
+import 'package:berlin_service_portal/page/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app/app_state.dart';
-import '../pages/home_page.dart';
-import '../pages/messages_page.dart';
+import '../page/home_page.dart';
+import '../page/messages_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});

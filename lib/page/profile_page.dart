@@ -4,7 +4,7 @@ import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';
 
 import '../app/app_state.dart';
-import '../services/openid_client.dart';
+import '../service/openid_client.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});

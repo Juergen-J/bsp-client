@@ -6,7 +6,7 @@ import 'package:scrollview_observer/scrollview_observer.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'dart:convert';
 import '../app/app_state.dart';
-import '../services/openid_client.dart';
+import '../service/openid_client.dart';
 import '../app/stomp_client_notifier.dart';
 
 class MessagesPage extends StatefulWidget {

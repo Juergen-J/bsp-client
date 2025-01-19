@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:berlin_service_portal/services/openid_client.dart';
+import 'package:berlin_service_portal/service/openid_client.dart';
 
 import '../app/app_state.dart';
-import '../services/chat_service.dart';
+import '../service/chat_service.dart';
 import 'open_map_page.dart';
 
 class HomePage extends StatelessWidget {

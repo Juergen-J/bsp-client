@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../pages/home_page.dart';
-import '../pages/messages_page.dart';
-import '../pages/profile_page.dart';
+import '../page/component/app_bar_component.dart';
+import '../page/home_page.dart';
+import '../page/login_page.dart';
+import '../page/messages_page.dart';
+import '../page/profile_page.dart';
 import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
@@ -13,6 +15,11 @@ final GlobalKey avatarKey = GlobalKey();
 final GoRouter router = GoRouter(
   initialLocation: '/home',
   routes: [
+    GoRoute(
+      path: '/login',
+      name: 'login',
+      builder: (context, state) => const LoginPage(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         var colorScheme = Theme.of(context).colorScheme;
@@ -25,50 +32,11 @@ final GoRouter router = GoRouter(
 
             return Scaffold(
               backgroundColor: colorScheme.surface,
-              appBar: PreferredSize(
-                preferredSize: const Size.fromHeight(56.0),
-                child: Center(
-                  child: SizedBox(
-                    width: contentWidth,
-                    child: AppBar(
-                      backgroundColor: colorScheme.primaryContainer,
-                      leading: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          color: Colors.grey[300],
-                          child: const Center(
-                            child: Text(
-                              'Logo',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      titleSpacing: 0,
-                      actions: [
-                        IconButton(
-                          icon: Icon(appState.isDarkMode
-                              ? Icons.dark_mode
-                              : Icons.light_mode),
-                          onPressed: appState.toggleTheme,
-                        ),
-                        GestureDetector(
-                          key: avatarKey,
-                          onTap: () => _showContextMenu(context),
-                          child: CircleAvatar(
-                            child: Icon(Icons.person),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                      ],
-                    ),
-                  ),
-                ),
+              appBar: CustomAppBar(
+                isDarkMode: appState.isDarkMode,
+                onThemeToggle: appState.toggleTheme,
+                avatarKey: avatarKey,
+                contentWidth: contentWidth,
               ),
               body: Container(
                 color: colorScheme.surface,
@@ -84,7 +52,8 @@ final GoRouter router = GoRouter(
                                   child: BottomNavigationBar(
                                     type: BottomNavigationBarType.fixed,
                                     // todo selected index by /me path???
-                                    currentIndex: _getSelectedIndex(context) ?? -1,
+                                    currentIndex:
+                                        _getSelectedIndex(context) ?? -1,
                                     // currentIndex: navigationShell.currentIndex,
                                     onTap: (index) =>
                                         navigationShell.goBranch(index),
@@ -217,8 +186,8 @@ final GoRouter router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/services',
-              name: 'services',
+              path: '/service',
+              name: 'service',
               builder: (context, state) => const Placeholder(),
             ),
           ],
@@ -250,7 +219,7 @@ int? _getSelectedIndex(BuildContext context) {
       return 2;
     case '/devices':
       return 3;
-    case '/services':
+    case '/service':
       return 4;
     default:
       return null;
@@ -274,32 +243,5 @@ Widget _buildFloatingMessagesWindow() {
         child: MessagesPage(),
       ),
     ),
-  );
-}
-
-void _showContextMenu(BuildContext context) {
-  final RenderBox avatarBox =
-      avatarKey.currentContext!.findRenderObject() as RenderBox;
-  final Offset avatarPosition = avatarBox.localToGlobal(Offset.zero);
-
-  showMenu(
-    context: context,
-    position: RelativeRect.fromLTRB(
-      avatarPosition.dx,
-      avatarPosition.dy + avatarBox.size.height,
-      avatarPosition.dx + avatarBox.size.width,
-      0,
-    ),
-    items: [
-      PopupMenuItem(
-        child: Text("Profile"),
-        onTap: () {
-          Future.microtask(() => context.pushReplacement('/me'));
-        },
-      ),
-      PopupMenuItem(
-        child: Text("Logout"),
-      ),
-    ],
   );
 }

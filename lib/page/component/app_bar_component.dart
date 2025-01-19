@@ -32,6 +32,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       items: [
         PopupMenuItem(
+          child: const Text('Login'),
+          onTap: () {
+            Future.microtask(() => context.pushReplacement('/login'));
+          },
+        ),
+        PopupMenuItem(
           onTap: () {
             Future.microtask(() => context.pushReplacement('/me'));
           },

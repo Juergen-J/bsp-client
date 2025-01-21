@@ -7,10 +7,11 @@ import '../page/home_page.dart';
 import '../page/login_page.dart';
 import '../page/messages_page.dart';
 import '../page/profile_page.dart';
+import '../page/register_page.dart';
 import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
-final GlobalKey avatarKey = GlobalKey();
+final GlobalKey _avatarKey = GlobalKey();
 
 final GoRouter router = GoRouter(
   initialLocation: '/home',
@@ -19,6 +20,11 @@ final GoRouter router = GoRouter(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/register',
+      name: '/register',
+      builder: (context, state) => const RegisterPage(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
@@ -35,8 +41,8 @@ final GoRouter router = GoRouter(
               appBar: CustomAppBar(
                 isDarkMode: appState.isDarkMode,
                 onThemeToggle: appState.toggleTheme,
-                avatarKey: avatarKey,
                 contentWidth: contentWidth,
+                avatarKey: _avatarKey,
               ),
               body: Container(
                 color: colorScheme.surface,

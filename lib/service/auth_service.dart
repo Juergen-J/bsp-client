@@ -137,7 +137,6 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _refreshTokenCall() async {
-    // Пример:
     // final response = await _dio.post('http://localhost:8090/v1/user/refresh', data: {
     //   'refresh_token': _refreshToken,
     // });
@@ -151,21 +150,16 @@ class AuthService extends ChangeNotifier {
     // notifyListeners();
   }
 
-  /// Проверяем, надо ли рефрешнуть
   Future<void> refreshTokenIfNeeded() async {
     if (!isLoggedIn) return;
     final now = DateTime.now();
 
-    // Если token протух или через 30 сек протухнет — пробуем рефрешить
     if (_accessTokenExpiry == null ||
         now.isAfter(
             _accessTokenExpiry!.subtract(const Duration(seconds: 30)))) {
-      // Проверяем, не истёк ли refresh-токен
       if (_refreshTokenExpiry != null && now.isBefore(_refreshTokenExpiry!)) {
-        // можно рефрешнуть
         await _refreshTokenCall();
       } else {
-        // refresh тоже истёк, делаем logout
         await logout();
       }
     }
@@ -190,14 +184,8 @@ class AuthService extends ChangeNotifier {
     // todo call logout in BE
     notifyListeners();
   }
-
-  /// Пример любого запроса через этот Dio
-  Future<Response> fetchUserInfo() async {
-    return _dio.get('http://localhost:8090/v1/user-profile');
-  }
 }
 
-/// Интерсептор
 class AuthInterceptor extends Interceptor {
   final AuthService authService;
 

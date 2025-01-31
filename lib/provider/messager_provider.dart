@@ -3,35 +3,26 @@ import 'package:dio/dio.dart';
 import '../service/auth_service.dart';
 
 class MessagesProvider extends ChangeNotifier {
-  // Сервис авторизации, откуда возьмём Dio и информацию об авторизации
   AuthService _authService;
 
   Dio get _dio => _authService.dio;
 
-  // Списки данных
   List<Map<String, dynamic>> _conversations = [];
-
   List<Map<String, dynamic>> get conversations => _conversations;
 
   List<Map<String, dynamic>> _messages = [];
-
   List<Map<String, dynamic>> get messages => _messages;
 
-  // Для «пагинации» или других параметров
   int _messagePage = 0;
-
   int get messagePage => _messagePage;
 
   String? _selectedChatId;
-
   String? get selectedChatId => _selectedChatId;
 
-  // Конструктор пустой, т.к. мы свяжем провайдер с AuthService через ProxyProvider
   MessagesProvider(this._authService);
 
   bool get isLoggedIn => _authService.isLoggedIn;
 
-  /// Сбрасываем все данные (вызывается при логауте)
   void clear() {
     _conversations.clear();
     _messages.clear();
@@ -40,9 +31,8 @@ class MessagesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Пример: загрузить список конверсий
   Future<void> fetchConversations() async {
-    if (!isLoggedIn) return; // если не залогинен - ничего не делаем
+    if (!isLoggedIn) return;
     try {
       final response =
           await _dio!.get('http://localhost:8090/v1/message-report');
@@ -79,12 +69,9 @@ class MessagesProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final jsonData = response.data;
         final data = jsonData['content'] as List;
-        // Для первой загрузки (страница 0) заменяем список:
         if (_messagePage == 0) {
           _messages = [];
         }
-        // Добавляем в начало или в конец в зависимости от вашей логики
-        // Предположим, вы добавляете «сверху» при пролистывании вверх:
         _messages.insertAll(
             0,
             data.map((item) => {

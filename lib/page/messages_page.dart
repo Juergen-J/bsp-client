@@ -34,13 +34,10 @@ class MessagesPageState extends State<MessagesPage> {
     stompProvider.addListener(() {
       final messagesProv = context.read<MessagesProvider>();
 
-      // Если пришло новое сообщение
       if (stompProvider.message.isNotEmpty) {
         final messageMap = jsonDecode(stompProvider.message);
-        // Добавляем в провайдер
         messagesProv.addMessage(messageMap);
 
-        // Если сообщение от текущего пользователя, прокрутим вниз
         if (messageMap['userId'] == stompProvider.userId) {
           _scrollDownChat();
         }
@@ -51,7 +48,7 @@ class MessagesPageState extends State<MessagesPage> {
         _runManualListObserve();
       }
 
-      // Если пришёл report, тоже обновим список чатов
+      // todo use report
       if (stompProvider.report.isNotEmpty) {
         final report = jsonDecode(stompProvider.report);
         messagesProv.fetchConversations();
@@ -230,7 +227,7 @@ class MessagesPageState extends State<MessagesPage> {
               setState(() {
                 final msgProv = context.read<MessagesProvider>();
                 msgProv.selectChat(conversation['chatId']);
-                // msgProv.clearMessages(); // уже внутри selectChat можно чистить.
+                // msgProv.clearMessages();
                 msgProv.fetchMessages();
 
                 setState(() {
@@ -246,7 +243,7 @@ class MessagesPageState extends State<MessagesPage> {
 
   Widget _buildMessagesView(ColorScheme colorScheme) {
     final messagesProv = context.watch<MessagesProvider>();
-    final messages = messagesProv.messages; // <-- берём из провайдера
+    final messages = messagesProv.messages;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

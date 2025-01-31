@@ -1,18 +1,18 @@
-import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
-import 'openid_client.dart';
+import 'package:provider/provider.dart';
 
-createChatWith(List<String> userIds) async {
+import 'auth_service.dart';
+
+createChatWith(context, List<String> userIds) async {
+  final Dio dio = Provider.of<AuthService>(context, listen: false).dio;
   final String _host = FlavorConfig.instance.variables['beHost'];
-  final httpClient = await getAccessTokenHttpClient();
-  if (httpClient == null) {
-    print('HTTP client is null. Authentication might have failed.');
-    return;
-  }
-  final response = await httpClient.post(
-      Uri.parse('http://$_host/v1/chat'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(userIds));
+  final response = await dio.post(
+    'http://$_host/v1/chat',
+    options: Options(headers: {"Content-Type": "application/json"}),
+    data: userIds,
+  );
+
   if (response.statusCode == 200) {
   } else {
     print('Error : $response');

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../service/auth_service.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDarkMode;
@@ -43,8 +46,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           },
           child: const Text("Profile"),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           child: Text("Logout"),
+          onTap: () async {
+            await Provider.of<AuthService>(context, listen: false).logout();
+            Future.microtask(() => context.pushReplacement('/home'));
+          },
         ),
       ],
     );

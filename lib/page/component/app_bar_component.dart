@@ -24,6 +24,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   void _showContextMenu(BuildContext context) {
     final renderBox = avatarKey.currentContext!.findRenderObject() as RenderBox;
     final avatarPosition = renderBox.localToGlobal(Offset.zero);
+    final authService = Provider.of<AuthService>(context, listen: false);
 
     showMenu(
       context: context,
@@ -34,25 +35,27 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         0,
       ),
       items: [
-        PopupMenuItem(
-          child: const Text('Login'),
-          onTap: () {
-            Future.microtask(() => context.pushReplacement('/login'));
-          },
-        ),
+        if (!authService.isLoggedIn)
+          PopupMenuItem(
+            child: const Text('Login'),
+            onTap: () {
+              Future.microtask(() => context.pushReplacement('/login'));
+            },
+          ),
         PopupMenuItem(
           onTap: () {
             Future.microtask(() => context.pushReplacement('/me'));
           },
           child: const Text("Profile"),
         ),
-        PopupMenuItem(
-          child: Text("Logout"),
-          onTap: () async {
-            await Provider.of<AuthService>(context, listen: false).logout();
-            Future.microtask(() => context.pushReplacement('/home'));
-          },
-        ),
+        if (authService.isLoggedIn)
+          PopupMenuItem(
+            child: Text("Logout"),
+            onTap: () async {
+              await authService.logout();
+              Future.microtask(() => context.pushReplacement('/home'));
+            },
+          ),
       ],
     );
   }

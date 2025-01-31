@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../app/app_state.dart';
-import '../app/router.dart';
+import '../service/auth_service.dart';
 import 'component/app_bar_component.dart';
 
 class LoginPage extends StatefulWidget {
@@ -147,15 +147,18 @@ class _LoginPageState extends State<LoginPage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            onPressed: () {
+                            onPressed: () async {
                               if (_formKey.currentState!.validate()) {
-                                // TODO
-                                // appState.login(
-                                //   email: _emailController.text,
-                                //   password: _passwordController.text,
-                                // );
-                                // and redirect to home page
-                                print('Login button pressed');
+                                final authService = context.read<AuthService>();
+                                try {
+                                  await authService.login(
+                                    _emailController.text.trim(),
+                                    _passwordController.text.trim(),
+                                  );
+                                  context.go('/home');
+                                } catch (e) {
+                                  print('Login error: $e');
+                                }
                               }
                             },
                             child: Row(

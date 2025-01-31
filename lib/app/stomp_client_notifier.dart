@@ -2,28 +2,26 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
-import 'package:openid_client/openid_client.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
-import '../service/openid_client.dart';
+
+import '../service/auth_service.dart';
 
 class StompClientNotifier extends ChangeNotifier {
   final String _host = FlavorConfig.instance.variables['beHost'];
+  final AuthService _authService;
 
   StompClient? _stompClient;
   String report = '';
   String message = '';
   String? userId;
 
-  Future<void> getCurrentUserId() async {
-    UserInfo? userInfo = await getUserInfo();
-    userId = userInfo?.subject;
-  }
+  StompClientNotifier(this._authService);
 
   void connectStompClient() async {
-    userId = null;
-    final String? token = await getToken();
+    await _authService.ensureTokenIsFresh();
+    final token = _authService.accessToken;
     if (token == null) {
-      throw Exception("Token not found");
+      throw Exception("No token found (user not logged in?)");
     }
 
     if (_stompClient == null) {
@@ -52,8 +50,9 @@ class StompClientNotifier extends ChangeNotifier {
       );
 
       _stompClient?.activate();
+      final userInfo = _authService.getUserInfo();
+      userId = userInfo?.id;
     }
-    await getCurrentUserId();
   }
 
   void _onStompConnected(StompFrame frame) {
@@ -103,4 +102,3 @@ class StompClientNotifier extends ChangeNotifier {
     );
   }
 }
-

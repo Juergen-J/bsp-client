@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../service/auth_service.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDarkMode;
@@ -21,6 +24,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   void _showContextMenu(BuildContext context) {
     final renderBox = avatarKey.currentContext!.findRenderObject() as RenderBox;
     final avatarPosition = renderBox.localToGlobal(Offset.zero);
+    final authService = Provider.of<AuthService>(context, listen: false);
 
     showMenu(
       context: context,
@@ -31,21 +35,27 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         0,
       ),
       items: [
-        PopupMenuItem(
-          child: const Text('Login'),
-          onTap: () {
-            Future.microtask(() => context.pushReplacement('/login'));
-          },
-        ),
+        if (!authService.isLoggedIn)
+          PopupMenuItem(
+            child: const Text('Login'),
+            onTap: () {
+              Future.microtask(() => context.pushReplacement('/login'));
+            },
+          ),
         PopupMenuItem(
           onTap: () {
             Future.microtask(() => context.pushReplacement('/me'));
           },
           child: const Text("Profile"),
         ),
-        const PopupMenuItem(
-          child: Text("Logout"),
-        ),
+        if (authService.isLoggedIn)
+          PopupMenuItem(
+            child: Text("Logout"),
+            onTap: () async {
+              await authService.logout();
+              Future.microtask(() => context.pushReplacement('/home'));
+            },
+          ),
       ],
     );
   }

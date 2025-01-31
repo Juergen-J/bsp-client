@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';
 
 import '../app/app_state.dart';
-import '../service/openid_client.dart';
+import 'package:berlin_service_portal/model/user_info.dart';
+
+import '../service/auth_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -14,11 +14,15 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final Map<String, TextEditingController> _controllers = {};
-  Map<String, dynamic> personalData = {};
+  UserInfo? _userInfo;
   bool _isLoading = true;
-  final String _host = FlavorConfig.instance.variables['beHost'];
   bool _hasChanges = false;
+
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+
+  // final TextEditingController _idController = TextEditingController();
 
   @override
   void initState() {
@@ -28,52 +32,47 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
-    for (var controller in _controllers.values) {
-      controller.dispose();
-    }
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    // _idController.dispose();
+
     super.dispose();
   }
 
   Future<void> _loadUserData() async {
-    final data = await _getMe();
-    if (data != null) {
-      setState(() {
-        personalData = data;
-        _initializeControllers(data);
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
+    final authService = Provider.of<AuthService>(context, listen: false);
+
+    setState(() => _isLoading = true);
+
+    if (authService.isLoggedIn) {
+      try {
+        await authService.ensureTokenIsFresh();
+
+        await authService.fetchUserInfoFromApi();
+
+        final userInfo = authService.getUserInfo();
+        if (userInfo != null) {
+          setState(() {
+            _userInfo = userInfo;
+            _initializeControllers();
+          });
+        }
+      } catch (e) {
+        debugPrint('Error bei fetching userInfo: $e');
+      }
     }
+
+    setState(() => _isLoading = false);
   }
 
-  void _initializeControllers(Map<String, dynamic> data) {
-    data.forEach((key, value) {
-      _controllers[key] = TextEditingController(text: value.toString());
-    });
-  }
+  void _initializeControllers() {
+    if (_userInfo == null) return;
+    _firstNameController.text = _userInfo!.firstname;
+    _lastNameController.text = _userInfo!.lastname;
+    _emailController.text = _userInfo!.email;
 
-  Future<Map<String, dynamic>?> _getMe() async {
-    try {
-      final httpClient = await getAccessTokenHttpClient();
-      if (httpClient == null) {
-        print('HTTP client is null. Authentication might have failed.');
-        return null;
-      }
-      final response =
-          await httpClient.get(Uri.parse('http://$_host/v1/user-profile/me'));
-      if (response.statusCode == 200) {
-        return json.decode(response.body) as Map<String, dynamic>;
-      } else {
-        print('Request failed with status code: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching me: $e');
-      return null;
-    }
+    // _idController.text = _userInfo!.id;
   }
 
   @override
@@ -82,19 +81,19 @@ class _ProfilePageState extends State<ProfilePage> {
     final locales = appState.supportedLocales;
 
     return _isLoading
-        ? Center(child: CircularProgressIndicator())
+        ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
                   child: Text(
                     'Personal Info',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                 ),
                 ExpansionTile(
-                  title: Text(
+                  title: const Text(
                     'Change Language',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
@@ -119,35 +118,75 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
                 ExpansionTile(
-                  title: Text(
+                  title: const Text(
                     'Personal Info',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   children: [
-                    ...personalData.keys.map((key) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 8.0),
-                        child: TextFormField(
-                          controller: _controllers[key],
-                          decoration: InputDecoration(
-                            labelText: key,
-                            border: OutlineInputBorder(),
-                            enabled: false,
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _hasChanges = true;
-                            });
-                          },
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    //   child: TextFormField(
+                    //     controller: _idController,
+                    //     decoration: const InputDecoration(
+                    //       labelText: 'ID',
+                    //       border: OutlineInputBorder(),
+                    //     ),
+                    //     enabled: false,
+                    //   ),
+                    // ),
+
+                    // First Name
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
+                      child: TextFormField(
+                        controller: _firstNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'First Name',
+                          border: OutlineInputBorder(),
                         ),
-                      );
-                    }),
+                        onChanged: (value) {
+                          setState(() => _hasChanges = true);
+                        },
+                      ),
+                    ),
+
+                    // Last Name
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
+                      child: TextFormField(
+                        controller: _lastNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Last Name',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setState(() => _hasChanges = true);
+                        },
+                      ),
+                    ),
+
+                    // Email
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
+                      child: TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setState(() => _hasChanges = true);
+                        },
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: ElevatedButton(
-                        onPressed: _hasChanges ? null : null,
-                        child: Text('Save'),
+                        onPressed: _hasChanges ? _saveChanges : null,
+                        child: const Text('Save'),
                       ),
                     ),
                   ],
@@ -156,15 +195,34 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           );
   }
-}
 
-String _getLanguageName(Locale locale) {
-  switch (locale.languageCode) {
-    case 'en':
-      return 'English';
-    case 'ru':
-      return 'Русский';
-    default:
-      return locale.languageCode;
+  Future<void> _saveChanges() async {
+    if (_userInfo == null) return;
+    final authService = Provider.of<AuthService>(context, listen: false);
+
+    final updatedUserInfo = UserInfo(
+      id: _userInfo!.id,
+      firstname: _firstNameController.text,
+      lastname: _lastNameController.text,
+      email: _emailController.text,
+    );
+
+    // await authService.updateUserInfo(updatedUserInfo);
+
+    setState(() {
+      _userInfo = updatedUserInfo;
+      _hasChanges = false;
+    });
+  }
+
+  String _getLanguageName(Locale locale) {
+    switch (locale.languageCode) {
+      case 'en':
+        return 'English';
+      case 'ru':
+        return 'Русский';
+      default:
+        return locale.languageCode;
+    }
   }
 }

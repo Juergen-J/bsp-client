@@ -42,9 +42,7 @@ class MessagesPageState extends State<MessagesPage> {
           _scrollDownChat();
         }
 
-        // Обновим список чатов (countUnreadMessages и т.д.)
         messagesProv.fetchConversations();
-
         _runManualListObserve();
       }
 

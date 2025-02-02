@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:html' as html;
 import 'package:berlin_service_portal/model/user_info.dart';
 import 'package:dio/dio.dart';
@@ -11,6 +10,7 @@ class AuthService extends ChangeNotifier {
 
   String? _accessToken;
   String? _refreshToken;
+  String? _idToken;
   DateTime? _accessTokenExpiry;
   DateTime? _refreshTokenExpiry;
 
@@ -40,10 +40,14 @@ class AuthService extends ChangeNotifier {
         html.window.localStorage['access_token_expiry'];
     final storedRefreshTokenExpiry =
         html.window.localStorage['refresh_token_expiry'];
+    final idToken = html.window.localStorage['id_token'];
 
-    if (storedAccessToken != null && storedRefreshToken != null) {
+    if (storedAccessToken != null &&
+        storedRefreshToken != null &&
+        idToken != null) {
       _accessToken = storedAccessToken;
       _refreshToken = storedRefreshToken;
+      _idToken = idToken;
 
       if (storedAccessTokenExpiry != null) {
         _accessTokenExpiry = DateTime.tryParse(storedAccessTokenExpiry);
@@ -65,6 +69,9 @@ class AuthService extends ChangeNotifier {
     if (_refreshToken != null) {
       html.window.localStorage['refresh_token'] = _refreshToken!;
     }
+    if (_idToken != null) {
+      html.window.localStorage['id_token'] = _idToken!;
+    }
     if (_accessTokenExpiry != null) {
       html.window.localStorage['access_token_expiry'] =
           _accessTokenExpiry!.toIso8601String();
@@ -85,12 +92,11 @@ class AuthService extends ChangeNotifier {
         },
         options: Options(headers: {"Content-Type": "application/json"}),
       );
-      //todo use in be object
-      final decoded = jsonDecode(response.data) as Map<String, dynamic>;
-      final loginResponse = LoginResponse.fromJson(decoded);
+      final loginResponse = LoginResponse.fromJson(response.data);
 
       _accessToken = loginResponse.accessToken;
       _refreshToken = loginResponse.refreshToken;
+      _idToken = loginResponse.idToken;
 
       final expiresIn = loginResponse.expiresIn;
       final refreshExpiresIn = loginResponse.refreshExpiresIn;
@@ -129,7 +135,6 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
-        // todo
         await logout();
       }
       rethrow;
@@ -171,6 +176,7 @@ class AuthService extends ChangeNotifier {
 
   /// Logout
   Future<void> logout() async {
+    await logoutFromApi();
     _accessToken = null;
     _refreshToken = null;
     _accessTokenExpiry = null;
@@ -181,8 +187,20 @@ class AuthService extends ChangeNotifier {
     html.window.localStorage.remove('access_token_expiry');
     html.window.localStorage.remove('refresh_token_expiry');
 
-    // todo call logout in BE
     notifyListeners();
+  }
+
+  Future<void> logoutFromApi() async {
+    try {
+      await _dio.post(
+        'http://localhost:8090/v1/user/logout',
+        data: _idToken,
+        options: Options(headers: {"Content-Type": "text/plain"}),
+      );
+      notifyListeners();
+    } on DioException catch (e) {
+      rethrow;
+    }
   }
 }
 

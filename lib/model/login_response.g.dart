@@ -12,6 +12,7 @@ LoginResponse _$LoginResponseFromJson(Map<String, dynamic> json) =>
       expiresIn: (json['expires_in'] as num).toInt(),
       refreshExpiresIn: (json['refresh_expires_in'] as num).toInt(),
       refreshToken: json['refresh_token'] as String,
+      idToken: json['id_token'] as String,
       tokenType: json['token_type'] as String?,
       scope: json['scope'] as String?,
     );
@@ -24,4 +25,5 @@ Map<String, dynamic> _$LoginResponseToJson(LoginResponse instance) =>
       'refresh_token': instance.refreshToken,
       'token_type': instance.tokenType,
       'scope': instance.scope,
+      'id_token': instance.idToken,
     };

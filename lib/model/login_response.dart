@@ -21,11 +21,15 @@ class LoginResponse {
 
   final String? scope;
 
+  @JsonKey(name: 'id_token')
+  final String idToken;
+
   LoginResponse({
     required this.accessToken,
     required this.expiresIn,
     required this.refreshExpiresIn,
     required this.refreshToken,
+    required this.idToken,
     this.tokenType,
     this.scope,
   });

@@ -2,10 +2,12 @@ import 'dart:html' as html;
 import 'package:berlin_service_portal/model/user_info.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_flavor/flutter_flavor.dart';
 
 import '../model/login_response.dart';
 
 class AuthService extends ChangeNotifier {
+  final String _host = FlavorConfig.instance.variables['beHost'];
   final Dio _dio = Dio();
 
   String? _accessToken;
@@ -82,7 +84,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> login(String email, String password) async {
+  Future<String> login(String email, String password) async {
     try {
       final response = await _dio.post(
         'http://localhost:8090/v1/user/login',
@@ -110,8 +112,139 @@ class AuthService extends ChangeNotifier {
       _saveTokensToStorage();
       fetchUserInfoFromApi();
       notifyListeners();
+      return '';
     } on DioException catch (e) {
-      rethrow;
+      if (e.response?.statusCode == 400) {
+        if (e.response.toString() == "unverified_mail") {
+          return "unverified_mail";
+        } else {
+          return 'incorrect_password';
+        }
+       }
+
+      return '';
+    }
+  }
+
+  Future<String> signUp(String email, String password, String firstName, String lastName) async {
+    try {
+      final response = await Dio().post(
+        'http://localhost:8090/v1/user/signup',
+        data: {
+          "email": email,
+          "firstName": firstName,
+          "lastName": lastName,
+          "password": password,
+        },
+        options: Options(headers: {"Content-Type": "application/json"}),
+      );
+      if (response.statusCode == 204) {
+
+      } else {
+        if (kDebugMode) {
+          print('signup: status code ${response.statusCode}');
+        }
+      }
+      return '';
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        return 'email_exist';
+      }
+      return '';
+    }
+  }
+
+  Future<String> verifyEmail(String email, String code) async {
+    try {
+      final response = await Dio().post(
+        'http://localhost:8090/v1/user/verify-email',
+        data: {
+          "email": email,
+          "code": code,
+        },
+        options: Options(headers: {"Content-Type": "application/json"}),
+      );
+
+      if (response.statusCode == 204) {
+
+      } else {
+        if (kDebugMode) {
+          print('verification email: status code ${response.statusCode}');
+        }
+      }
+      return '';
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        return 'incorrect_code';
+      }
+      return '';
+    }
+  }
+
+  Future<String> recoverPassword(String email, String code, String password) async {
+    try {
+      final response = await Dio().post(
+        'http://localhost:8090/v1/user/recover-password',
+        data: {
+          "email": email,
+          "password": password,
+          "code": code,
+        },
+        options: Options(headers: {"Content-Type": "application/json"}),
+      );
+
+      if (response.statusCode == 204) {
+
+      } else {
+        if (kDebugMode) {
+          print('recovery password: status code ${response.statusCode}');
+        }
+      }
+      return '';
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        return 'incorrect_code';
+      }
+      return '';
+    }
+  }
+
+  Future<String> sendPasswordRecoveryCode(String email) async {
+    try {
+      final response = await Dio().post(
+        'http://localhost:8090/v1/user/send-forgot-password-code',
+        data: email,
+        options: Options(headers: {"Content-Type": "text/plain"}),
+      );
+
+      return '';
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        return 'incorrect_email';
+      }
+      return '';
+    }
+  }
+
+  Future<void> resendVerifyEmail(String email) async {
+    try {
+      final response = await Dio().post(
+        'http://localhost:8090/v1/user/resend-verify-email',
+        data: email,
+        options: Options(headers: {"Content-Type": "text/plain"}),
+      );
+
+      if (response.statusCode == 204) {
+
+      } else {
+        if (kDebugMode) {
+          print('resend verification email: status code ${response.statusCode}');
+        }
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        rethrow;
+      }
     }
   }
 

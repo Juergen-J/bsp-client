@@ -14,6 +14,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
+  bool _incorrect_credentials = false;
   final GlobalKey _avatarKeyLogin = GlobalKey();
 
   final _emailController = TextEditingController();
@@ -73,6 +74,12 @@ class _LoginPageState extends State<LoginPage> {
                           style: Theme.of(context).textTheme.bodyMedium,
                           textAlign: TextAlign.center,
                         ),
+                        if (_incorrect_credentials)
+                          Text(
+                            'Sie verwenden einen falschen Login oder ein falsches Passwort.',
+                            style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _emailController,
@@ -125,8 +132,7 @@ class _LoginPageState extends State<LoginPage> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              // todo
-                              // context.go('/forgot-password');
+                              context.go('/forgot-password');
                             },
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
@@ -148,14 +154,26 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                             onPressed: () async {
+                              setState(() {
+                                _incorrect_credentials = false;
+                              });
+
                               if (_formKey.currentState!.validate()) {
                                 final authService = context.read<AuthService>();
                                 try {
-                                  await authService.login(
+                                  String error = await authService.login(
                                     _emailController.text.trim(),
                                     _passwordController.text.trim(),
                                   );
-                                  context.go('/home');
+                                  if (error.isEmpty) {
+                                    context.go('/home');
+                                  } else if (error == 'unverified_mail') {
+                                    context.go('/verify-email', extra: _emailController.text.trim());
+                                  } else {
+                                    setState(() {
+                                      _incorrect_credentials = true;
+                                    });
+                                  }
                                 } catch (e) {
                                   print('Login error: $e');
                                 }

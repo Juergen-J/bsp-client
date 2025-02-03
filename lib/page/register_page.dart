@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../app/app_state.dart';
 import '../app/router.dart';
+import '../service/auth_service.dart';
 import 'component/app_bar_component.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -14,11 +15,12 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final GlobalKey _avatarKeyRegister = GlobalKey();
+  bool _emailExists = true;
   bool _obscurePassword = true;
   bool _obscurePasswordConfirm = true;
 
   final _emailController = TextEditingController();
-  final _usernameController = TextEditingController();
+  //final _usernameController = TextEditingController();
   final _firstnameController = TextEditingController();
   final _lastnameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -91,16 +93,22 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               suffixIcon: const Icon(Icons.email),
                             ),
+                            onChanged: (value) {
+                              _emailExists = false;
+                            },
                             keyboardType: TextInputType.emailAddress,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Bitte E-Mail eingeben';
+                              } else if (_emailExists) {
+                                return 'E-Mail existiert';
                               }
                               return null;
                             },
                           ),
                           const SizedBox(height: 16),
 
+                          /*
                           // Username
                           TextFormField(
                             controller: _usernameController,
@@ -118,7 +126,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 16),*/
 
                           // Firstname
                           TextFormField(
@@ -232,11 +240,26 @@ class _RegisterPageState extends State<RegisterPage> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              onPressed: () {
+                              onPressed: () async {
                                 if (_formKey.currentState!.validate()) {
-                                  // TODO
-                                  // appState.register(...))
-                                  // (context.go('/home');), и т.д.
+                                  final authService = context.read<AuthService>();
+                                  try {
+                                    String error = await authService.signUp(
+                                      _emailController.text.trim(),
+                                      _passwordController.text.trim(),
+                                      _firstnameController.text.trim(),
+                                      _lastnameController.text.trim()
+                                    );
+                                    if (error.isNotEmpty) {
+                                      _emailExists = true;
+                                      _formKey.currentState!.validate();
+                                    } else {
+                                      context.go('/verify-email', extra: _emailController.text.trim());
+                                    }
+
+                                  } catch (e) {
+                                    print('SignUp error: $e');
+                                  }
                                   print('Register button pressed');
                                 }
                               },

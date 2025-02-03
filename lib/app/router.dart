@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/page/verify_email_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,7 @@ import '../page/component/app_bar_component.dart';
 import '../page/home_page.dart';
 import '../page/login_page.dart';
 import '../page/messages_page.dart';
+import '../page/password_recovery_page.dart';
 import '../page/profile_page.dart';
 import '../page/register_page.dart';
 import 'app_state.dart';
@@ -17,6 +19,11 @@ final GoRouter router = GoRouter(
   initialLocation: '/home',
   routes: [
     GoRoute(
+      path: '/verify-email',
+      name: 'verify email',
+      builder: (context, state) => VerifyEmailPage(email: state.extra as String,),
+    ),
+    GoRoute(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginPage(),
@@ -25,6 +32,11 @@ final GoRouter router = GoRouter(
       path: '/register',
       name: '/register',
       builder: (context, state) => const RegisterPage(),
+    ),
+    GoRoute(
+      path: '/forgot-password',
+      name: '/forgot-password',
+      builder: (context, state) => const PasswordRecoveryPage(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {

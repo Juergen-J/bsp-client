@@ -34,7 +34,11 @@ class _DeviceFormPageState extends State<DeviceFormPage> {
   @override
   void initState() {
     super.initState();
-    fetchDeviceTypes();
+    fetchDeviceTypes().then((_) {
+      if (widget.editedDevice != null) {
+        prefillForm(widget.editedDevice!);
+      }
+    });
   }
 
   Future<void> fetchDeviceTypes() async {
@@ -93,6 +97,42 @@ class _DeviceFormPageState extends State<DeviceFormPage> {
     } catch (e) {
       print('Error adding device: $e');
     }
+  }
+
+  Future<void> deleteDeviceFromMyListAndClose(String deviceId) async {
+    final Dio dio = Provider.of<AuthService>(context, listen: false).dio;
+    final String _host = FlavorConfig.instance.variables['beHost'];
+
+    try {
+      await dio.post('http://$_host/v1/device/$deviceId/remove-from-my-list');
+      context.pop();
+    } catch (e) {
+      print('Error deleting device: $e');
+    }
+  }
+
+  Future<void> prefillForm(ShortDevice device) async {
+    selectedDeviceType =
+        deviceTypeList.firstWhere((dt) => dt.id == device.deviceType.id);
+
+    if (selectedDeviceType != null) {
+      await fetchBrands(selectedDeviceType!.id);
+      selectedBrand = brandList.firstWhere((b) => b.id == device.brand.id);
+
+      if (selectedBrand != null) {
+        await fetchDevicesByBrand(selectedDeviceType!.id, selectedBrand!.id);
+        selectedModel = deviceList.firstWhere((d) => d.id == device.id);
+
+        if (selectedModel != null) {
+          deviceName = '${selectedBrand!.name} ${selectedModel!.name}';
+          parameters = selectedModel!.attributes
+              .map((a) => MapEntry(a.propertyName, a.value))
+              .toList();
+        }
+      }
+    }
+
+    setState(() {});
   }
 
   @override
@@ -173,12 +213,6 @@ class _DeviceFormPageState extends State<DeviceFormPage> {
                   },
                 ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: TextEditingController(text: deviceName),
-                decoration: const InputDecoration(labelText: "Device Name"),
-                readOnly: true,
-              ),
-              const SizedBox(height: 16),
               const Text("Technical Specs",
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
@@ -207,14 +241,23 @@ class _DeviceFormPageState extends State<DeviceFormPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  if (selectedModel != null) {
-                    addDeviceToMyListAndClose(selectedModel!.id);
-                  }
-                },
-                child: const Text('Add to My Devices'),
-              ),
+              widget.editedDevice != null
+                  ? ElevatedButton(
+                      onPressed: () {
+                        deleteDeviceFromMyListAndClose(widget.editedDevice!.id);
+                      },
+                      style:
+                          ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: const Text('Delete from My Devices'),
+                    )
+                  : ElevatedButton(
+                      onPressed: () {
+                        if (selectedModel != null) {
+                          addDeviceToMyListAndClose(selectedModel!.id);
+                        }
+                      },
+                      child: const Text('Add to My Devices'),
+                    ),
             ],
           ),
         ),

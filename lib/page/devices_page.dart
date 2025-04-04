@@ -59,7 +59,10 @@ class _DevicesPageState extends State<DevicesPage> {
           itemBuilder: (context, index) {
             if (index == _devices.length) {
               return GestureDetector(
-                onTap: () => context.push('/device-form'),
+                onTap: () async {
+                  final resul = await context.push('/device-form');
+                  if (resul == true) fetchMyDevices();
+                },
                 child: Card(
                   color: Colors.green[50],
                   elevation: 6,
@@ -84,7 +87,11 @@ class _DevicesPageState extends State<DevicesPage> {
 
             final device = _devices[index];
             return GestureDetector(
-              onTap: () => context.push('/device-form', extra: device),
+              onTap: () async {
+                final result =
+                    await context.push('/device-form', extra: device);
+                if (result == true) fetchMyDevices();
+              },
               child: Card(
                 elevation: 6,
                 shape: RoundedRectangleBorder(

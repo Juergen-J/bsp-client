@@ -93,7 +93,7 @@ class _DeviceFormPageState extends State<DeviceFormPage> {
 
     try {
       await dio.post('http://$_host/v1/device/$deviceId/add-to-my-list');
-      context.pop();
+      context.pop(true);
     } catch (e) {
       print('Error adding device: $e');
     }
@@ -105,7 +105,7 @@ class _DeviceFormPageState extends State<DeviceFormPage> {
 
     try {
       await dio.post('http://$_host/v1/device/$deviceId/remove-from-my-list');
-      context.pop();
+      context.pop(true);
     } catch (e) {
       print('Error deleting device: $e');
     }

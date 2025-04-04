@@ -120,13 +120,14 @@ class AuthService extends ChangeNotifier {
         } else {
           return 'incorrect_password';
         }
-       }
+      }
 
       return '';
     }
   }
 
-  Future<String> signUp(String email, String password, String firstName, String lastName) async {
+  Future<String> signUp(
+      String email, String password, String firstName, String lastName) async {
     try {
       final response = await Dio().post(
         'http://localhost:8090/v1/user/signup',
@@ -139,7 +140,6 @@ class AuthService extends ChangeNotifier {
         options: Options(headers: {"Content-Type": "application/json"}),
       );
       if (response.statusCode == 204) {
-
       } else {
         if (kDebugMode) {
           print('signup: status code ${response.statusCode}');
@@ -166,7 +166,6 @@ class AuthService extends ChangeNotifier {
       );
 
       if (response.statusCode == 204) {
-
       } else {
         if (kDebugMode) {
           print('verification email: status code ${response.statusCode}');
@@ -181,7 +180,8 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<String> recoverPassword(String email, String code, String password) async {
+  Future<String> recoverPassword(
+      String email, String code, String password) async {
     try {
       final response = await Dio().post(
         'http://localhost:8090/v1/user/recover-password',
@@ -194,7 +194,6 @@ class AuthService extends ChangeNotifier {
       );
 
       if (response.statusCode == 204) {
-
       } else {
         if (kDebugMode) {
           print('recovery password: status code ${response.statusCode}');
@@ -235,10 +234,10 @@ class AuthService extends ChangeNotifier {
       );
 
       if (response.statusCode == 204) {
-
       } else {
         if (kDebugMode) {
-          print('resend verification email: status code ${response.statusCode}');
+          print(
+              'resend verification email: status code ${response.statusCode}');
         }
       }
     } on DioException catch (e) {
@@ -247,17 +246,6 @@ class AuthService extends ChangeNotifier {
       }
     }
   }
-
-  // void _decodeUserInfoFromToken(String token) {
-  //   try {
-  //     final decoded = JwtDecoder.decode(token);
-  //     _userName = decoded['name'];
-  //     _email = decoded['email'];
-  //   } catch (e) {
-  //     _userName = null;
-  //     _email = null;
-  //   }
-  // }
 
   Future<void> fetchUserInfoFromApi() async {
     try {
@@ -275,17 +263,35 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _refreshTokenCall() async {
-    // final response = await _dio.post('http://localhost:8090/v1/user/refresh', data: {
-    //   'refresh_token': _refreshToken,
-    // });
-    // final data = response.data;
-    // _accessToken = data['access_token'];
-    // _refreshToken = data['refresh_token'];
-    // _accessTokenExpiry = ...
-    // _refreshTokenExpiry = ...
-    // _decodeUserInfoFromToken(_accessToken!);
-    // _saveToStorage();
-    // notifyListeners();
+    try {
+      final response = await _dio.post(
+        'http://localhost:8090/v1/user/refresh-token',
+        data: _refreshToken,
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      final data = response.data;
+      _accessToken = data['access_token'];
+      _refreshToken = data['refresh_token'];
+
+      final expiresIn = data['expires_in'];
+      final refreshExpiresIn = data['refresh_expires_in'];
+
+      _accessTokenExpiry = DateTime.now().add(Duration(seconds: expiresIn));
+      _refreshTokenExpiry =
+          DateTime.now().add(Duration(seconds: refreshExpiresIn));
+
+      _saveTokensToStorage();
+      notifyListeners();
+    } on DioException catch (e) {
+      print(
+          'Refresh token error: ${e.response?.statusCode} - ${e.response?.data}');
+      await logout();
+    }
   }
 
   Future<void> refreshTokenIfNeeded() async {
@@ -309,7 +315,6 @@ class AuthService extends ChangeNotifier {
 
   /// Logout
   Future<void> logout() async {
-    await logoutFromApi();
     _accessToken = null;
     _refreshToken = null;
     _accessTokenExpiry = null;
@@ -320,6 +325,7 @@ class AuthService extends ChangeNotifier {
     html.window.localStorage.remove('access_token_expiry');
     html.window.localStorage.remove('refresh_token_expiry');
 
+    await logoutFromApi();
     notifyListeners();
   }
 
@@ -332,7 +338,7 @@ class AuthService extends ChangeNotifier {
       );
       notifyListeners();
     } on DioException catch (e) {
-      rethrow;
+      print('Logout error: ${e.response?.statusCode} - ${e.response?.data}');
     }
   }
 }
@@ -354,12 +360,11 @@ class AuthInterceptor extends Interceptor {
     super.onRequest(options, handler);
   }
 
-// Опционально можем обрабатывать 401, если сервер вернёт
-// @override
-// void onError(DioError err, ErrorInterceptorHandler handler) {
-//   if (err.response?.statusCode == 401) {
-//     // Попробовать рефрешнуться, если есть смысл
-//   }
-//   super.onError(err, handler);
-// }
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.response?.statusCode == 401) {
+      authService._refreshTokenCall();
+    }
+    super.onError(err, handler);
+  }
 }

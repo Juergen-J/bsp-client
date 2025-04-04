@@ -37,7 +37,7 @@ class HomePage extends StatelessWidget {
             Container(
               width: 500,
               height: 500,
-              child: MapWithLocationPage(),
+              child: Placeholder(),
             )
           ],
         ),

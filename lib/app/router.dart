@@ -72,51 +72,48 @@ final GoRouter router = GoRouter(
                 contentWidth: contentWidth,
                 avatarKey: _avatarKey,
               ),
-              body: Stack(
-                children: [
-                  isMobile
-                      ? Column(
-                          children: [
-                            Expanded(child: navigationShell),
-                            SafeArea(
-                              child: BottomNavigationBar(
-                                type: BottomNavigationBarType.fixed,
-                                currentIndex: _getSelectedIndex(context) ?? 0,
-                                onTap: (index) =>
-                                    navigationShell.goBranch(index),
-                                items: const [
-                                  BottomNavigationBarItem(
-                                      icon: Icon(Icons.home), label: 'Home'),
-                                  BottomNavigationBarItem(
-                                      icon: Icon(Icons.favorite),
-                                      label: 'Favorites'),
-                                  BottomNavigationBarItem(
-                                      icon: Icon(Icons.message),
-                                      label: 'Messages'),
-                                  BottomNavigationBarItem(
-                                      icon: Icon(Icons.devices),
-                                      label: 'Devices'),
-                                  BottomNavigationBarItem(
-                                      icon: Icon(Icons.sell_rounded),
-                                      label: 'Services'),
-                                ],
-                              ),
+              body: isMobile
+                  ? Column(
+                      children: [
+                        Expanded(child: navigationShell),
+                        SafeArea(
+                          child: BottomNavigationBar(
+                            type: BottomNavigationBarType.fixed,
+                            currentIndex: _getSelectedIndex(context) ?? 0,
+                            onTap: (index) => navigationShell.goBranch(index),
+                            items: const [
+                              BottomNavigationBarItem(
+                                  icon: Icon(Icons.home), label: 'Home'),
+                              BottomNavigationBarItem(
+                                  icon: Icon(Icons.favorite),
+                                  label: 'Favorites'),
+                              BottomNavigationBarItem(
+                                  icon: Icon(Icons.message), label: 'Messages'),
+                              BottomNavigationBarItem(
+                                  icon: Icon(Icons.devices), label: 'Devices'),
+                              BottomNavigationBarItem(
+                                  icon: Icon(Icons.sell_rounded),
+                                  label: 'Services'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Container(
+                          color: colorScheme.surface,
+                          child: Center(
+                            child: SizedBox(
+                              width: contentWidth,
+                              child: const TopNavigationMenu(),
                             ),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            Container(
-                              color: colorScheme.surface,
-                              child: Center(
-                                child: SizedBox(
-                                  width: contentWidth,
-                                  child: const TopNavigationMenu(),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: SingleChildScrollView(
+                          ),
+                        ),
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              SingleChildScrollView(
                                 child: Center(
                                   child: SizedBox(
                                     width: contentWidth,
@@ -124,38 +121,56 @@ final GoRouter router = GoRouter(
                                   ),
                                 ),
                               ),
-                            ),
-                            Container(
-                              width: double.infinity,
-                              color: colorScheme.primary,
-                              child: Center(
-                                child:
-                                    FooterComponent(contentWidth: contentWidth),
+                              Positioned(
+                                right: 16,
+                                bottom: 16,
+                                child: FloatingActionButton(
+                                  heroTag: null,
+                                  onPressed: () {
+                                    isMessagesWindowOpen.value =
+                                        !isMessagesWindowOpen.value;
+                                  },
+                                  child: const Icon(Icons.message),
+                                ),
                               ),
-                            ),
-                          ],
+                              ValueListenableBuilder<bool>(
+                                valueListenable: isMessagesWindowOpen,
+                                builder: (context, isOpen, child) {
+                                  if (isOpen) {
+                                    return Positioned(
+                                      right: 16,
+                                      bottom: 80,
+                                      child: Material(
+                                        elevation: 8,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          width: 300,
+                                          height: 400,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: const MessagesPage(),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: isMessagesWindowOpen,
-                    builder: (context, isOpen, child) {
-                      if (!isMobile && isOpen) {
-                        return _buildFloatingMessagesWindow();
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ],
-              ),
-              floatingActionButton: !isMobile
-                  ? FloatingActionButton(
-                      heroTag: null,
-                      onPressed: () {
-                        isMessagesWindowOpen.value =
-                            !isMessagesWindowOpen.value;
-                      },
-                      child: const Icon(Icons.message),
-                    )
-                  : null,
+                        Container(
+                          width: double.infinity,
+                          color: colorScheme.primary,
+                          child: Center(
+                            child: FooterComponent(contentWidth: contentWidth),
+                          ),
+                        ),
+                      ],
+                    ),
             );
           },
         );

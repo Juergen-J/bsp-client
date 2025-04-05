@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../service/chat_service.dart';
-import 'open_map_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});

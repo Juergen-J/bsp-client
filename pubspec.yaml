@@ -43,3 +43,11 @@ flutter:
   generate: true
   assets:
     - assets/icons/
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/noto_sans/NotoSans-Regular.ttf
+        - asset: assets/fonts/noto_sans/NotoSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/noto_sans/NotoSans-Bold.ttf
+          weight: 700

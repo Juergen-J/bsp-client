@@ -1,3 +1,5 @@
+import 'package:berlin_service_portal/page/component/footer_component.dart';
+import 'package:berlin_service_portal/page/component/top_navigation_menu.dart';
 import 'package:berlin_service_portal/page/devices_page.dart';
 import 'package:berlin_service_portal/page/verify_email_page.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +62,7 @@ final GoRouter router = GoRouter(
           builder: (context, constraints) {
             double contentWidth =
                 constraints.maxWidth > 1200 ? 1200 : constraints.maxWidth;
+            bool isMobile = constraints.maxWidth < 450;
 
             return Scaffold(
               backgroundColor: colorScheme.surface,
@@ -69,109 +72,88 @@ final GoRouter router = GoRouter(
                 contentWidth: contentWidth,
                 avatarKey: _avatarKey,
               ),
-              body: Container(
-                color: colorScheme.surface,
-                child: Stack(children: [
-                  Center(
-                    child: SizedBox(
-                      width: contentWidth,
-                      child: constraints.maxWidth < 450
-                          ? Column(
-                              children: [
-                                Expanded(child: navigationShell),
-                                SafeArea(
-                                  child: BottomNavigationBar(
-                                    type: BottomNavigationBarType.fixed,
-                                    // todo selected index by /me path???
-                                    currentIndex:
-                                        _getSelectedIndex(context) ?? -1,
-                                    // currentIndex: navigationShell.currentIndex,
-                                    onTap: (index) =>
-                                        navigationShell.goBranch(index),
-                                    items: const [
-                                      BottomNavigationBarItem(
-                                          icon: Icon(Icons.home),
-                                          label: 'Home'),
-                                      BottomNavigationBarItem(
-                                          icon: Icon(Icons.favorite),
-                                          label: 'Favorites'),
-                                      BottomNavigationBarItem(
-                                          icon: Icon(Icons.message),
-                                          label: 'Messages'),
-                                      BottomNavigationBarItem(
-                                          icon: Icon(Icons.devices),
-                                          label: 'Devices'),
-                                      BottomNavigationBarItem(
-                                          icon: Icon(Icons.sell_rounded),
-                                          label: 'Services'),
-                                    ],
+              body: Stack(
+                children: [
+                  isMobile
+                      ? Column(
+                          children: [
+                            Expanded(child: navigationShell),
+                            SafeArea(
+                              child: BottomNavigationBar(
+                                type: BottomNavigationBarType.fixed,
+                                currentIndex: _getSelectedIndex(context) ?? 0,
+                                onTap: (index) =>
+                                    navigationShell.goBranch(index),
+                                items: const [
+                                  BottomNavigationBarItem(
+                                      icon: Icon(Icons.home), label: 'Home'),
+                                  BottomNavigationBarItem(
+                                      icon: Icon(Icons.favorite),
+                                      label: 'Favorites'),
+                                  BottomNavigationBarItem(
+                                      icon: Icon(Icons.message),
+                                      label: 'Messages'),
+                                  BottomNavigationBarItem(
+                                      icon: Icon(Icons.devices),
+                                      label: 'Devices'),
+                                  BottomNavigationBarItem(
+                                      icon: Icon(Icons.sell_rounded),
+                                      label: 'Services'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            Container(
+                              color: colorScheme.surface,
+                              child: Center(
+                                child: SizedBox(
+                                  width: contentWidth,
+                                  child: const TopNavigationMenu(),
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Center(
+                                  child: SizedBox(
+                                    width: contentWidth,
+                                    child: navigationShell,
                                   ),
                                 ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                NavigationRail(
-                                  backgroundColor:
-                                      colorScheme.surfaceContainerHighest,
-                                  indicatorColor: colorScheme.onInverseSurface,
-                                  extended: constraints.maxWidth > 800,
-                                  destinations: const [
-                                    NavigationRailDestination(
-                                      icon: Icon(Icons.home),
-                                      label: Text('Home'),
-                                    ),
-                                    NavigationRailDestination(
-                                      icon: Icon(Icons.favorite),
-                                      label: Text('Favorites'),
-                                    ),
-                                    NavigationRailDestination(
-                                      icon: Icon(Icons.message),
-                                      label: Text('Messages'),
-                                    ),
-                                    NavigationRailDestination(
-                                        icon: Icon(Icons.devices),
-                                        label: Text('Devices')),
-                                    NavigationRailDestination(
-                                        icon: Icon(Icons.sell_rounded),
-                                        label: Text('Services')),
-                                  ],
-                                  selectedIndex: _getSelectedIndex(context),
-                                  onDestinationSelected: (index) =>
-                                      navigationShell.goBranch(index),
-                                ),
-                                const VerticalDivider(thickness: 1, width: 1),
-                                Expanded(
-                                  child: navigationShell,
-                                ),
-                              ],
+                              ),
                             ),
-                    ),
-                  ),
+                            Container(
+                              width: double.infinity,
+                              color: colorScheme.primary,
+                              child: Center(
+                                child:
+                                    FooterComponent(contentWidth: contentWidth),
+                              ),
+                            ),
+                          ],
+                        ),
                   ValueListenableBuilder<bool>(
                     valueListenable: isMessagesWindowOpen,
                     builder: (context, isOpen, child) {
-                      if (constraints.maxWidth >= 450 && isOpen) {
-                        return Positioned(
-                          right: 16,
-                          bottom: 80,
-                          child: _buildFloatingMessagesWindow(),
-                        );
+                      if (!isMobile && isOpen) {
+                        return _buildFloatingMessagesWindow();
                       }
                       return const SizedBox.shrink();
                     },
                   ),
-                ]),
+                ],
               ),
-              floatingActionButton: constraints.maxWidth >= 450
+              floatingActionButton: !isMobile
                   ? FloatingActionButton(
-                      heroTag: null, //todo resolve hero tags
+                      heroTag: null,
                       onPressed: () {
                         isMessagesWindowOpen.value =
                             !isMessagesWindowOpen.value;
-                        print("Messages $isMessagesWindowOpen");
                       },
-                      child: Icon(Icons.message),
+                      child: const Icon(Icons.message),
                     )
                   : null,
             );
@@ -272,7 +254,7 @@ Widget _buildFloatingMessagesWindow() {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: MessagesPage(),
+        child: const MessagesPage(),
       ),
     ),
   );

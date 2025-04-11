@@ -1,20 +1,20 @@
-import 'package:berlin_service_portal/page/component/footer_component.dart';
-import 'package:berlin_service_portal/page/component/top_navigation_menu.dart';
-import 'package:berlin_service_portal/page/devices_page.dart';
-import 'package:berlin_service_portal/page/verify_email_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../model/short_device.dart';
 import '../page/component/app_bar_component.dart';
+import '../page/component/footer_component.dart';
+import '../page/component/top_navigation_menu.dart';
 import '../page/device_form_page.dart';
+import '../page/devices_page.dart';
 import '../page/home_page.dart';
 import '../page/login_page.dart';
 import '../page/messages_page.dart';
 import '../page/password_recovery_page.dart';
 import '../page/profile_page.dart';
 import '../page/register_page.dart';
+import '../page/verify_email_page.dart';
 import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
@@ -99,77 +99,88 @@ final GoRouter router = GoRouter(
                         ),
                       ],
                     )
-                  : Column(
-                      children: [
-                        Container(
-                          color: colorScheme.surface,
-                          child: Center(
-                            child: SizedBox(
-                              width: contentWidth,
-                              child: const TopNavigationMenu(),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              SingleChildScrollView(
-                                child: Center(
-                                  child: SizedBox(
-                                    width: contentWidth,
-                                    child: navigationShell,
-                                  ),
-                                ),
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        return NotificationListener<ScrollNotification>(
+                          onNotification: (notification) => true,
+                          child: SingleChildScrollView(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight,
                               ),
-                              Positioned(
-                                right: 16,
-                                bottom: 16,
-                                child: FloatingActionButton(
-                                  heroTag: null,
-                                  onPressed: () {
-                                    isMessagesWindowOpen.value =
-                                        !isMessagesWindowOpen.value;
-                                  },
-                                  child: const Icon(Icons.message),
-                                ),
-                              ),
-                              ValueListenableBuilder<bool>(
-                                valueListenable: isMessagesWindowOpen,
-                                builder: (context, isOpen, child) {
-                                  if (isOpen) {
-                                    return Positioned(
-                                      right: 16,
-                                      bottom: 80,
-                                      child: Material(
-                                        elevation: 8,
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Container(
-                                          width: 300,
-                                          height: 400,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: const MessagesPage(),
+                              child: IntrinsicHeight(
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      color: colorScheme.surface,
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: contentWidth,
+                                          child: const TopNavigationMenu(),
                                         ),
                                       ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
+                                    ),
+                                    Expanded(
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: contentWidth,
+                                          child: Stack(
+                                            children: [
+                                              navigationShell,
+                                              Positioned(
+                                                right: 16,
+                                                bottom: 16,
+                                                child: FloatingActionButton(
+                                                  heroTag: null,
+                                                  onPressed: () {
+                                                    isMessagesWindowOpen.value =
+                                                        !isMessagesWindowOpen
+                                                            .value;
+                                                  },
+                                                  child:
+                                                      const Icon(Icons.message),
+                                                ),
+                                              ),
+                                              ValueListenableBuilder<bool>(
+                                                valueListenable:
+                                                    isMessagesWindowOpen,
+                                                builder:
+                                                    (context, isOpen, child) {
+                                                  return AnimatedSwitcher(
+                                                    duration: const Duration(
+                                                        milliseconds: 300),
+                                                    child: isOpen
+                                                        ? _buildFloatingMessagesWindow()
+                                                        : const SizedBox
+                                                            .shrink(),
+                                                  );
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    AnimatedSize(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                      child: Container(
+                                        width: double.infinity,
+                                        color: colorScheme.primary,
+                                        child: Center(
+                                          child: FooterComponent(
+                                              contentWidth: contentWidth),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                        Container(
-                          width: double.infinity,
-                          color: colorScheme.primary,
-                          child: Center(
-                            child: FooterComponent(contentWidth: contentWidth),
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
             );
           },

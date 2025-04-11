@@ -37,6 +37,11 @@ class HomePage extends StatelessWidget {
               width: 500,
               height: 500,
               child: Placeholder(),
+            ),
+            Container(
+              width: 500,
+              height: 500,
+              child: Placeholder(),
             )
           ],
         ),

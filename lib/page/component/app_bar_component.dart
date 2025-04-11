@@ -64,40 +64,53 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return AppBar(
-      backgroundColor: colorScheme.primary,
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
+    return Container(
+      width: double.infinity,
+      color: colorScheme.primary,
+      child: Center(
         child: Container(
-          width: 40,
-          height: 40,
-          color: Colors.grey[300],
-          child: const Center(
-            child: Text(
-              'Logo',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
+          width: contentWidth,
+          height: kToolbarHeight,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: Text(
+                      'Logo',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode),
+                    onPressed: onThemeToggle,
+                  ),
+                  GestureDetector(
+                    key: avatarKey,
+                    onTap: () => _showContextMenu(context),
+                    child: const CircleAvatar(
+                      child: Icon(Icons.person),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-      titleSpacing: 0,
-      actions: [
-        IconButton(
-          icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode),
-          onPressed: onThemeToggle,
-        ),
-        GestureDetector(
-          key: avatarKey,
-          onTap: () => _showContextMenu(context),
-          child: const CircleAvatar(
-            child: Icon(Icons.person),
-          ),
-        ),
-        const SizedBox(width: 16),
-      ],
     );
   }
 }

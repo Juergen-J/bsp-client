@@ -142,20 +142,35 @@ final GoRouter router = GoRouter(
                                                 ),
                                               ),
                                               ValueListenableBuilder<bool>(
-                                                valueListenable:
-                                                    isMessagesWindowOpen,
-                                                builder:
-                                                    (context, isOpen, child) {
-                                                  return AnimatedSwitcher(
-                                                    duration: const Duration(
-                                                        milliseconds: 300),
-                                                    child: isOpen
-                                                        ? _buildFloatingMessagesWindow()
-                                                        : const SizedBox
-                                                            .shrink(),
+                                                valueListenable: isMessagesWindowOpen,
+                                                builder: (context, isOpen, child) {
+                                                  return Positioned(
+                                                    right: 16,
+                                                    bottom: 80,
+                                                    child: AnimatedOpacity(
+                                                      opacity: isOpen ? 1 : 0,
+                                                      duration: const Duration(milliseconds: 300),
+                                                      child: IgnorePointer(
+                                                        ignoring: !isOpen,
+                                                        child: Material(
+                                                          elevation: 8,
+                                                          borderRadius: BorderRadius.circular(12),
+                                                          child: Container(
+                                                            width: 300,
+                                                            height: 400,
+                                                            decoration: BoxDecoration(
+                                                              color: Colors.white,
+                                                              borderRadius: BorderRadius.circular(12),
+                                                            ),
+                                                            child: const MessagesPage(),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   );
                                                 },
                                               ),
+
                                             ],
                                           ),
                                         ),

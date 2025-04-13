@@ -14,11 +14,15 @@ class ModalOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final modalManager = Provider.of<ModalManager>(context);
     final modalType = modalManager.currentModal;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     Widget? content;
     switch (modalType) {
       case ModalType.login:
-        content = LoginModal(onClose: modalManager.close);
+        content = LoginModal(
+          onClose: modalManager.close,
+          isMobile: isMobile,
+        );
         break;
       // case ModalType.register:
       //   content = RegisterModal(onClose: modalManager.close);

@@ -2,6 +2,6 @@ enum ModalType{
   login,
   register,
   forgotPassword,
-  resetPassword,
+  resetPassword, verifyEmail,
 
 }

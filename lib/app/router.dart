@@ -9,13 +9,9 @@ import '../page/component/top_navigation_menu.dart';
 import '../page/device_form_page.dart';
 import '../page/devices_page.dart';
 import '../page/home_page.dart';
-import '../page/login_page.dart';
 import '../page/messages_page.dart';
 import '../page/modal/modal_overlay.dart';
-import '../page/password_recovery_page.dart';
 import '../page/profile_page.dart';
-import '../page/register_page.dart';
-import '../page/verify_email_page.dart';
 import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
@@ -24,28 +20,6 @@ final GlobalKey _avatarKey = GlobalKey();
 final GoRouter router = GoRouter(
   initialLocation: '/home',
   routes: [
-    GoRoute(
-      path: '/verify-email',
-      name: 'verify email',
-      builder: (context, state) => VerifyEmailPage(
-        email: state.extra as String,
-      ),
-    ),
-    GoRoute(
-      path: '/login',
-      name: 'login',
-      builder: (context, state) => const LoginPage(),
-    ),
-    GoRoute(
-      path: '/register',
-      name: '/register',
-      builder: (context, state) => const RegisterPage(),
-    ),
-    GoRoute(
-      path: '/forgot-password',
-      name: '/forgot-password',
-      builder: (context, state) => const PasswordRecoveryPage(),
-    ),
     GoRoute(
       path: '/device-form',
       name: 'device_form',

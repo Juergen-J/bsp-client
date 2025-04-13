@@ -1,8 +1,11 @@
 import 'dart:ui';
 
+import 'package:berlin_service_portal/page/modal/register_modal.dart';
+import 'package:berlin_service_portal/page/modal/verify_email_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'forgot_password_modal.dart';
 import 'login_modal.dart';
 import 'modal_service.dart';
 import 'modal_type.dart';
@@ -24,15 +27,23 @@ class ModalOverlay extends StatelessWidget {
           isMobile: isMobile,
         );
         break;
-      // case ModalType.register:
-      //   content = RegisterModal(onClose: modalManager.close);
-      //   break;
-      // case ModalType.forgotPassword:
-      //   content = ForgotPasswordModal(onClose: modalManager.close);
-      //   break;
-      // case ModalType.verifyEmail:
-      //   content = VerifyEmailModal(onClose: modalManager.close);
-      //   break;
+      case ModalType.register:
+        content = RegisterModal(
+          onClose: modalManager.close,
+          isMobile: isMobile,
+        );
+        break;
+      case ModalType.forgotPassword:
+        content = ForgotPasswordModal(
+            onClose: modalManager.close, isMobile: isMobile);
+        break;
+      case ModalType.verifyEmail:
+        content = VerifyEmailModal(
+          onClose: modalManager.close,
+          isMobile: isMobile,
+          email: modalManager.data as String? ?? '',
+        );
+        break;
       default:
         content = null;
     }
@@ -56,7 +67,7 @@ class ModalOverlay extends StatelessWidget {
         child: modalType == null
             ? const SizedBox.shrink()
             : Stack(
-                key: ValueKey(modalType), // для смены между окнами
+                key: ValueKey(modalType),
                 children: [
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),

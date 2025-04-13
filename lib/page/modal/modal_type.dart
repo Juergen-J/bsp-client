@@ -1,7 +1,7 @@
-enum ModalType{
+enum ModalType {
   login,
   register,
   forgotPassword,
-  resetPassword, verifyEmail,
-
+  resetPassword,
+  verifyEmail,
 }

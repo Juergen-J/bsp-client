@@ -110,9 +110,8 @@ class _LoginModalState extends State<LoginModal> {
                       widget.onClose();
                     } else if (error == 'unverified_mail') {
                       if (error == 'unverified_mail') {
-                        context
-                            .read<ModalManager>()
-                            .show(ModalType.verifyEmail);
+                        context.read<ModalManager>().show(ModalType.verifyEmail,
+                            data: _emailController.text.trim());
                       }
                     } else {
                       setState(() => _incorrectCredentials = true);

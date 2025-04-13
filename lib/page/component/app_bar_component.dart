@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../service/auth_service.dart';
+import '../modal/modal_service.dart';
+import '../modal/modal_type.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDarkMode;
@@ -39,7 +41,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           PopupMenuItem(
             child: const Text('Login'),
             onTap: () {
-              Future.microtask(() => context.pushReplacement('/login'));
+              context.read<ModalManager>().show(ModalType.login);
+              // Future.microtask(() => context.pushReplacement('/login'));
             },
           ),
         PopupMenuItem(

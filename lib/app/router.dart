@@ -11,6 +11,7 @@ import '../page/devices_page.dart';
 import '../page/home_page.dart';
 import '../page/login_page.dart';
 import '../page/messages_page.dart';
+import '../page/modal/modal_overlay.dart';
 import '../page/password_recovery_page.dart';
 import '../page/profile_page.dart';
 import '../page/register_page.dart';
@@ -64,140 +65,159 @@ final GoRouter router = GoRouter(
                 constraints.maxWidth > 1200 ? 1200 : constraints.maxWidth;
             bool isMobile = constraints.maxWidth < 450;
 
-            return Scaffold(
-              backgroundColor: colorScheme.surface,
-              appBar: CustomAppBar(
-                isDarkMode: appState.isDarkMode,
-                onThemeToggle: appState.toggleTheme,
-                contentWidth: contentWidth,
-                avatarKey: _avatarKey,
-              ),
-              body: isMobile
-                  ? Column(
-                      children: [
-                        Expanded(child: navigationShell),
-                        SafeArea(
-                          child: BottomNavigationBar(
-                            type: BottomNavigationBarType.fixed,
-                            currentIndex: _getSelectedIndex(context) ?? 0,
-                            onTap: (index) => navigationShell.goBranch(index),
-                            items: const [
-                              BottomNavigationBarItem(
-                                  icon: Icon(Icons.home), label: 'Home'),
-                              BottomNavigationBarItem(
-                                  icon: Icon(Icons.favorite),
-                                  label: 'Favorites'),
-                              BottomNavigationBarItem(
-                                  icon: Icon(Icons.message), label: 'Messages'),
-                              BottomNavigationBarItem(
-                                  icon: Icon(Icons.devices), label: 'Devices'),
-                              BottomNavigationBarItem(
-                                  icon: Icon(Icons.sell_rounded),
-                                  label: 'Services'),
-                            ],
+            return Stack(children: [
+              Scaffold(
+                backgroundColor: colorScheme.surface,
+                appBar: CustomAppBar(
+                  isDarkMode: appState.isDarkMode,
+                  onThemeToggle: appState.toggleTheme,
+                  contentWidth: contentWidth,
+                  avatarKey: _avatarKey,
+                ),
+                body: isMobile
+                    ? Column(
+                        children: [
+                          Expanded(child: navigationShell),
+                          SafeArea(
+                            child: BottomNavigationBar(
+                              type: BottomNavigationBarType.fixed,
+                              currentIndex: _getSelectedIndex(context) ?? 0,
+                              onTap: (index) => navigationShell.goBranch(index),
+                              items: const [
+                                BottomNavigationBarItem(
+                                    icon: Icon(Icons.home), label: 'Home'),
+                                BottomNavigationBarItem(
+                                    icon: Icon(Icons.favorite),
+                                    label: 'Favorites'),
+                                BottomNavigationBarItem(
+                                    icon: Icon(Icons.message),
+                                    label: 'Messages'),
+                                BottomNavigationBarItem(
+                                    icon: Icon(Icons.devices),
+                                    label: 'Devices'),
+                                BottomNavigationBarItem(
+                                    icon: Icon(Icons.sell_rounded),
+                                    label: 'Services'),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    )
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        return NotificationListener<ScrollNotification>(
-                          onNotification: (notification) => true,
-                          child: SingleChildScrollView(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: constraints.maxHeight,
-                              ),
-                              child: IntrinsicHeight(
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      color: colorScheme.surface,
-                                      child: Center(
-                                        child: SizedBox(
-                                          width: contentWidth,
-                                          child: const TopNavigationMenu(),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Center(
-                                        child: SizedBox(
-                                          width: contentWidth,
-                                          child: Stack(
-                                            children: [
-                                              navigationShell,
-                                              Positioned(
-                                                right: 16,
-                                                bottom: 16,
-                                                child: FloatingActionButton(
-                                                  heroTag: null,
-                                                  onPressed: () {
-                                                    isMessagesWindowOpen.value =
-                                                        !isMessagesWindowOpen
-                                                            .value;
-                                                  },
-                                                  child:
-                                                      const Icon(Icons.message),
-                                                ),
-                                              ),
-                                              ValueListenableBuilder<bool>(
-                                                valueListenable: isMessagesWindowOpen,
-                                                builder: (context, isOpen, child) {
-                                                  return Positioned(
-                                                    right: 16,
-                                                    bottom: 80,
-                                                    child: AnimatedOpacity(
-                                                      opacity: isOpen ? 1 : 0,
-                                                      duration: const Duration(milliseconds: 300),
-                                                      child: IgnorePointer(
-                                                        ignoring: !isOpen,
-                                                        child: Material(
-                                                          elevation: 8,
-                                                          borderRadius: BorderRadius.circular(12),
-                                                          child: Container(
-                                                            width: 300,
-                                                            height: 400,
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.white,
-                                                              borderRadius: BorderRadius.circular(12),
-                                                            ),
-                                                            child: const MessagesPage(),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-
-                                            ],
+                        ],
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          return NotificationListener<ScrollNotification>(
+                            onNotification: (notification) => true,
+                            child: SingleChildScrollView(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: IntrinsicHeight(
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        color: colorScheme.surface,
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: contentWidth,
+                                            child: const TopNavigationMenu(),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    AnimatedSize(
-                                      duration:
-                                          const Duration(milliseconds: 300),
-                                      curve: Curves.easeInOut,
-                                      child: Container(
-                                        width: double.infinity,
-                                        color: colorScheme.primary,
+                                      Expanded(
                                         child: Center(
-                                          child: FooterComponent(
-                                              contentWidth: contentWidth),
+                                          child: SizedBox(
+                                            width: contentWidth,
+                                            child: Stack(
+                                              children: [
+                                                navigationShell,
+                                                Positioned(
+                                                  right: 16,
+                                                  bottom: 16,
+                                                  child: FloatingActionButton(
+                                                    heroTag: null,
+                                                    onPressed: () {
+                                                      isMessagesWindowOpen
+                                                              .value =
+                                                          !isMessagesWindowOpen
+                                                              .value;
+                                                    },
+                                                    child: const Icon(
+                                                        Icons.message),
+                                                  ),
+                                                ),
+                                                ValueListenableBuilder<bool>(
+                                                  valueListenable:
+                                                      isMessagesWindowOpen,
+                                                  builder:
+                                                      (context, isOpen, child) {
+                                                    return Positioned(
+                                                      right: 16,
+                                                      bottom: 80,
+                                                      child: AnimatedOpacity(
+                                                        opacity: isOpen ? 1 : 0,
+                                                        duration:
+                                                            const Duration(
+                                                                milliseconds:
+                                                                    300),
+                                                        child: IgnorePointer(
+                                                          ignoring: !isOpen,
+                                                          child: Material(
+                                                            elevation: 8,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12),
+                                                            child: Container(
+                                                              width: 300,
+                                                              height: 400,
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: Colors
+                                                                    .white,
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            12),
+                                                              ),
+                                                              child:
+                                                                  const MessagesPage(),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                )
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                      AnimatedSize(
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                        child: Container(
+                                          width: double.infinity,
+                                          color: colorScheme.primary,
+                                          child: Center(
+                                            child: FooterComponent(
+                                                contentWidth: contentWidth),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-            );
+                          );
+                        },
+                      ),
+              ),
+              const ModalOverlay(),
+            ]);
           },
         );
       },

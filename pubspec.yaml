@@ -29,6 +29,7 @@ dependencies:
   jwt_decoder: ^2.0.1
   json_annotation: ^4.9.0
   pinput: ^5.0.1
+  flutter_svg: ^2.0.17
 
 dev_dependencies:
   flutter_test:

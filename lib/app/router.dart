@@ -16,6 +16,7 @@ import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
 final GlobalKey _avatarKey = GlobalKey();
+final GlobalKey _languageKey = GlobalKey();
 
 final GoRouter router = GoRouter(
   initialLocation: '/home',
@@ -47,6 +48,7 @@ final GoRouter router = GoRouter(
                   onThemeToggle: appState.toggleTheme,
                   contentWidth: contentWidth,
                   avatarKey: _avatarKey,
+                  languageKey: _languageKey,
                 ),
                 body: isMobile
                     ? Column(

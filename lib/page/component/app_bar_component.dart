@@ -1,4 +1,6 @@
+import 'package:berlin_service_portal/app/app_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -10,6 +12,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
   final GlobalKey avatarKey;
+  final GlobalKey languageKey;
   final double contentWidth;
 
   const CustomAppBar({
@@ -17,11 +20,50 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.isDarkMode,
     required this.onThemeToggle,
     required this.avatarKey,
+    required this.languageKey,
     required this.contentWidth,
   }) : super(key: key);
 
   @override
-  Size get preferredSize => const Size.fromHeight(56.0);
+  Size get preferredSize => const Size.fromHeight(64.0);
+
+  void _showLanguageContextMenu(BuildContext context) {
+    final contextForKey = languageKey.currentContext;
+    if (contextForKey == null) {
+      debugPrint('languageKey is not attached yet');
+      return;
+    }
+
+    final renderBox = contextForKey.findRenderObject() as RenderBox;
+    final languagePosition = renderBox.localToGlobal(Offset.zero);
+    final appState = Provider.of<AppState>(context, listen: false);
+    final locales = appState.supportedLocales;
+
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+
+    showMenu(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(
+          languagePosition.dx,
+          languagePosition.dy + renderBox.size.height,
+          renderBox.size.width,
+          renderBox.size.height,
+        ),
+        Offset.zero & overlay.size,
+      ),
+      items: locales.map((locale) {
+        return PopupMenuItem(
+          value: locale,
+          child: Text(locale.languageCode.toUpperCase()),
+        );
+      }).toList(),
+    ).then((selectedLocale) {
+      if (selectedLocale != null) {
+        appState.changeLocale(selectedLocale);
+      }
+    });
+  }
 
   void _showContextMenu(BuildContext context) {
     final renderBox = avatarKey.currentContext!.findRenderObject() as RenderBox;
@@ -42,7 +84,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: const Text('Login'),
             onTap: () {
               context.read<ModalManager>().show(ModalType.login);
-              // Future.microtask(() => context.pushReplacement('/login'));
             },
           ),
         PopupMenuItem(
@@ -53,7 +94,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         if (authService.isLoggedIn)
           PopupMenuItem(
-            child: Text("Logout"),
+            child: const Text("Logout"),
             onTap: () async {
               await authService.logout();
               Future.microtask(() => context.pushReplacement('/home'));
@@ -66,6 +107,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final locale = Provider.of<AppState>(context).locale;
 
     return Container(
       width: double.infinity,
@@ -73,41 +115,122 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: Center(
         child: Container(
           width: contentWidth,
-          height: kToolbarHeight,
+          height: preferredSize.height,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: Text(
-                      'Logo',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
+              // Логотип
+              Row(
+                children: [
+                  const Text(
+                    'Find',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
+                  const Text(
+                    'Xpert',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              ),
+
+              // Строка поиска
+              Expanded(
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search',
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon:
+                            const Icon(Icons.location_pin, color: Colors.blue),
+                        onPressed: () {
+                          // handle geolocation tap
+                        },
+                      )
+                    ],
+                  ),
                 ),
+              ),
+
+              const SizedBox(width: 16),
+              Row(
+                children: [
+                  IconButton(
+                    icon: SvgPicture.asset(
+                      'assets/icons/equalizer.svg',
+                      color: colorScheme.onPrimary,
+                      width: 24,
+                      height: 20,
+                    ),
+                    onPressed: () {
+                      // handle favorites tap
+                    },
+                  ),
+                  Stack(alignment: Alignment.center, children: [
+                    IconButton(
+                      key: languageKey,
+                      icon: SvgPicture.asset(
+                        'assets/icons/language.svg',
+                        colorFilter: ColorFilter.mode(
+                            colorScheme.onPrimary, BlendMode.srcIn),
+                        width: 24,
+                        height: 24,
+                      ),
+                      onPressed: () {
+                        _showLanguageContextMenu(context);
+                      },
+                    ),
+                    IgnorePointer(
+                      child: Text(
+                        locale.languageCode.toUpperCase(),
+                        style: TextStyle(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10),
+                      ),
+                    )
+                  ])
+                ],
               ),
               Row(
                 children: [
                   IconButton(
-                    icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode),
+                    icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                        color: Colors.white),
                     onPressed: onThemeToggle,
                   ),
                   GestureDetector(
                     key: avatarKey,
                     onTap: () => _showContextMenu(context),
                     child: const CircleAvatar(
-                      child: Icon(Icons.person),
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.person, color: Colors.black),
                     ),
                   ),
-                  const SizedBox(width: 16),
                 ],
               ),
             ],

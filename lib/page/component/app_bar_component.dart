@@ -1,113 +1,36 @@
 import 'package:berlin_service_portal/app/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../service/auth_service.dart';
-import '../modal/modal_service.dart';
-import '../modal/modal_type.dart';
+import 'account_menu_overlay.dart';
+import 'context_menu.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
   final GlobalKey avatarKey;
   final GlobalKey languageKey;
+  // todo mobile view
   final double contentWidth;
 
   const CustomAppBar({
-    Key? key,
+    super.key,
     required this.isDarkMode,
     required this.onThemeToggle,
     required this.avatarKey,
     required this.languageKey,
     required this.contentWidth,
-  }) : super(key: key);
+  });
 
   @override
-  Size get preferredSize => const Size.fromHeight(64.0);
-
-  void _showLanguageContextMenu(BuildContext context) {
-    final contextForKey = languageKey.currentContext;
-    if (contextForKey == null) {
-      debugPrint('languageKey is not attached yet');
-      return;
-    }
-
-    final renderBox = contextForKey.findRenderObject() as RenderBox;
-    final languagePosition = renderBox.localToGlobal(Offset.zero);
-    final appState = Provider.of<AppState>(context, listen: false);
-    final locales = appState.supportedLocales;
-
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-
-    showMenu(
-      context: context,
-      position: RelativeRect.fromRect(
-        Rect.fromLTWH(
-          languagePosition.dx,
-          languagePosition.dy + renderBox.size.height,
-          renderBox.size.width,
-          renderBox.size.height,
-        ),
-        Offset.zero & overlay.size,
-      ),
-      items: locales.map((locale) {
-        return PopupMenuItem(
-          value: locale,
-          child: Text(locale.languageCode.toUpperCase()),
-        );
-      }).toList(),
-    ).then((selectedLocale) {
-      if (selectedLocale != null) {
-        appState.changeLocale(selectedLocale);
-      }
-    });
-  }
-
-  void _showContextMenu(BuildContext context) {
-    final renderBox = avatarKey.currentContext!.findRenderObject() as RenderBox;
-    final avatarPosition = renderBox.localToGlobal(Offset.zero);
-    final authService = Provider.of<AuthService>(context, listen: false);
-
-    showMenu(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        avatarPosition.dx,
-        avatarPosition.dy + renderBox.size.height,
-        avatarPosition.dx + renderBox.size.width,
-        0,
-      ),
-      items: [
-        if (!authService.isLoggedIn)
-          PopupMenuItem(
-            child: const Text('Login'),
-            onTap: () {
-              context.read<ModalManager>().show(ModalType.login);
-            },
-          ),
-        PopupMenuItem(
-          onTap: () {
-            Future.microtask(() => context.pushReplacement('/me'));
-          },
-          child: const Text("Profile"),
-        ),
-        if (authService.isLoggedIn)
-          PopupMenuItem(
-            child: const Text("Logout"),
-            onTap: () async {
-              await authService.logout();
-              Future.microtask(() => context.pushReplacement('/home'));
-            },
-          ),
-      ],
-    );
-  }
+  Size get preferredSize => const Size.fromHeight(100.0);
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final locale = Provider.of<AppState>(context).locale;
+    final appState = Provider.of<AppState>(context);
+    final locale = appState.locale;
 
     return Container(
       width: double.infinity,
@@ -120,21 +43,20 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Логотип
               Row(
                 children: [
-                  const Text(
+                  Text(
                     'Find',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Xpert',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -142,13 +64,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   const SizedBox(width: 16),
                 ],
               ),
-
-              // Строка поиска
               Expanded(
                 child: Container(
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colorScheme.onPrimary,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -159,14 +79,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       const Expanded(
                         child: TextField(
                           decoration: InputDecoration(
-                            hintText: 'Search',
                             border: InputBorder.none,
                           ),
                         ),
                       ),
                       IconButton(
-                        icon:
-                            const Icon(Icons.location_pin, color: Colors.blue),
+                        icon: Icon(Icons.location_pin,
+                            color: colorScheme.primary),
                         onPressed: () {
                           // handle geolocation tap
                         },
@@ -175,7 +94,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
               ),
-
               const SizedBox(width: 16),
               Row(
                 children: [
@@ -201,7 +119,20 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                         height: 24,
                       ),
                       onPressed: () {
-                        _showLanguageContextMenu(context);
+                        showContextMenuForWidget<Locale>(
+                          context: context,
+                          key: languageKey,
+                          items: appState.supportedLocales.map((locale) {
+                            return PopupMenuItem(
+                              value: locale,
+                              child: Text(locale.languageCode.toUpperCase()),
+                            );
+                          }).toList(),
+                        ).then((selectedLocale) {
+                          if (selectedLocale != null) {
+                            appState.changeLocale(selectedLocale);
+                          }
+                        });
                       },
                     ),
                     IgnorePointer(
@@ -220,15 +151,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 children: [
                   IconButton(
                     icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                        color: Colors.white),
+                        color: colorScheme.onPrimary),
                     onPressed: onThemeToggle,
                   ),
                   GestureDetector(
                     key: avatarKey,
-                    onTap: () => _showContextMenu(context),
-                    child: const CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person, color: Colors.black),
+                    onTap: () => AccountMenuOverlay.show(context, avatarKey),
+                    child: SvgPicture.asset(
+                      'assets/icons/profile.svg',
+                      colorFilter: ColorFilter.mode(
+                          colorScheme.onPrimary, BlendMode.srcIn),
+                      width: 24,
+                      height: 24,
                     ),
                   ),
                 ],

@@ -67,7 +67,7 @@ class AccountMenuOverlay {
                           ],
                         ),
                       ),
-                      if (true) ...[
+                      if (authService.isLoggedIn) ...[
                         _item(context, Icons.person, colorScheme.onSecondary,
                             'Mein Profil', colorScheme.onSurfaceVariant, () {
                           hide();

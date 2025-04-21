@@ -38,7 +38,7 @@ class AccountMenuOverlay {
                 child: Container(
                   width: 240,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -55,40 +55,57 @@ class AccountMenuOverlay {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Mein Konto',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Mein Konto',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSecondary)),
                             IconButton(
                               icon: const Icon(Icons.close, size: 20),
                               onPressed: hide,
+                              color: colorScheme.onSecondary,
                             ),
                           ],
                         ),
                       ),
-                      if (authService.isLoggedIn) ...[
-                        _item(context, Icons.person, 'Mein Profil', () {
+                      if (true) ...[
+                        _item(context, Icons.person, colorScheme.onSecondary,
+                            'Mein Profil', colorScheme.onSurfaceVariant, () {
                           hide();
                           context.push('/me');
                         }),
-                        _item(context, Icons.devices, 'Devices', () {
+                        _item(context, Icons.devices, colorScheme.onSurface,
+                            'Devices', colorScheme.onSurfaceVariant, () {
                           hide();
                           context.push('/devices');
                         }),
-                        _item(context, Icons.widgets, 'Services', () {
+                        _item(context, Icons.widgets, colorScheme.onSurface,
+                            'Services', colorScheme.onSurfaceVariant, () {
                           hide();
                           context.push('/services');
                         }),
-                        _item(context, Icons.favorite_border, 'Merkliste', () {
+                        _item(
+                            context,
+                            Icons.favorite_border,
+                            colorScheme.onSurface,
+                            'Merkliste',
+                            colorScheme.onSurfaceVariant, () {
                           hide();
                           context.push('/favorites');
                         }),
                         const Divider(height: 1),
-                        _item(context, Icons.logout, 'Ausloggen', () async {
+                        _item(
+                            context,
+                            Icons.logout,
+                            colorScheme.onSurface,
+                            'Ausloggen',
+                            colorScheme.onSurfaceVariant, () async {
                           hide();
                           await authService.logout();
                           context.pushReplacement('/home');
                         }),
                       ] else ...[
-                        _item(context, Icons.login, 'Login', () {
+                        _item(context, Icons.login, colorScheme.onSurface,
+                            'Login', colorScheme.onSurfaceVariant, () {
                           hide();
                           context.read<ModalManager>().show(ModalType.login);
                         }),
@@ -111,18 +128,19 @@ class AccountMenuOverlay {
     _entry = null;
   }
 
-  static Widget _item(
-      BuildContext context, IconData icon, String label, VoidCallback onTap) {
+  static Widget _item(BuildContext context, IconData icon, Color iconColor,
+      String label, Color labelColor, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: Colors.black87),
+            Icon(icon, size: 18, color: iconColor),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(label, style: const TextStyle(fontSize: 14)),
+              child: Text(label,
+                  style: TextStyle(fontSize: 14, color: labelColor)),
             ),
           ],
         ),

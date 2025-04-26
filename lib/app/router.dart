@@ -37,8 +37,9 @@ final GoRouter router = GoRouter(
         return LayoutBuilder(
           builder: (context, constraints) {
             double contentWidth =
-                constraints.maxWidth > 1200 ? 1200 : constraints.maxWidth;
+                constraints.maxWidth > 1290 ? 1290 : constraints.maxWidth;
             bool isMobile = constraints.maxWidth < 450;
+            double height = 90.0;
 
             return Stack(children: [
               Scaffold(
@@ -49,6 +50,7 @@ final GoRouter router = GoRouter(
                   contentWidth: contentWidth,
                   avatarKey: _avatarKey,
                   languageKey: _languageKey,
+                  height: height,
                 ),
                 body: isMobile
                     ? Column(
@@ -56,6 +58,9 @@ final GoRouter router = GoRouter(
                           Expanded(child: navigationShell),
                           SafeArea(
                             child: BottomNavigationBar(
+                              backgroundColor: colorScheme.primary,
+                              fixedColor: colorScheme.secondary,
+                              unselectedItemColor: colorScheme.onPrimary,
                               type: BottomNavigationBarType.fixed,
                               currentIndex: _getSelectedIndex(context) ?? 0,
                               onTap: (index) => navigationShell.goBranch(index),
@@ -91,12 +96,15 @@ final GoRouter router = GoRouter(
                                 child: IntrinsicHeight(
                                   child: Column(
                                     children: [
-                                      Container(
+                                      Material(
+                                        elevation: 4,
                                         color: colorScheme.surface,
                                         child: Center(
                                           child: SizedBox(
                                             width: contentWidth,
-                                            child: const TopNavigationMenu(),
+                                            child: TopNavigationMenu(
+                                                contentWidth: contentWidth,
+                                                height: height),
                                           ),
                                         ),
                                       ),

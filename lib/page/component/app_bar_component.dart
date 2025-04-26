@@ -11,20 +11,22 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onThemeToggle;
   final GlobalKey avatarKey;
   final GlobalKey languageKey;
+
   // todo mobile view
   final double contentWidth;
+  final double height;
 
-  const CustomAppBar({
-    super.key,
-    required this.isDarkMode,
-    required this.onThemeToggle,
-    required this.avatarKey,
-    required this.languageKey,
-    required this.contentWidth,
-  });
+  const CustomAppBar(
+      {super.key,
+      required this.isDarkMode,
+      required this.onThemeToggle,
+      required this.avatarKey,
+      required this.languageKey,
+      required this.contentWidth,
+      required this.height});
 
   @override
-  Size get preferredSize => const Size.fromHeight(100.0);
+  Size get preferredSize => Size.fromHeight(height);
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +76,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
-                      const Icon(Icons.search, size: 20),
+                      const Icon(Icons.search),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: TextField(
@@ -97,17 +99,17 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               const SizedBox(width: 16),
               Row(
                 children: [
-                  IconButton(
-                    icon: SvgPicture.asset(
-                      'assets/icons/equalizer.svg',
-                      color: colorScheme.onPrimary,
-                      width: 24,
-                      height: 20,
-                    ),
-                    onPressed: () {
-                      // handle favorites tap
-                    },
-                  ),
+                  // IconButton(
+                  //   icon: SvgPicture.asset(
+                  //     'assets/icons/equalizer.svg',
+                  //     color: colorScheme.onPrimary,
+                  //     width: 24,
+                  //     height: 20,
+                  //   ),
+                  //   onPressed: () {
+                  //     // handle favorites tap
+                  //   },
+                  // ),
                   Stack(alignment: Alignment.center, children: [
                     IconButton(
                       key: languageKey,

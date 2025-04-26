@@ -141,7 +141,8 @@ class MessagesPageState extends State<MessagesPage> {
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
-        title: const Text("Messages"),
+        title: Text("Messages"),
+
         leading: _showMessagesOnly
             ? IconButton(
           icon: const Icon(Icons.arrow_back),

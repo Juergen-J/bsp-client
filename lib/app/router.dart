@@ -39,7 +39,7 @@ final GoRouter router = GoRouter(
             double contentWidth =
                 constraints.maxWidth > 1290 ? 1290 : constraints.maxWidth;
             bool isMobile = constraints.maxWidth < 450;
-            double height = 90.0;
+            double height = 60.0;
 
             return Stack(children: [
               Scaffold(

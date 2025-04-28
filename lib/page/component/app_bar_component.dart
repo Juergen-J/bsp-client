@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
+import '../../util/user_info_sammler.dart';
 import 'account_menu_overlay.dart';
 import 'context_menu.dart';
 
@@ -88,8 +89,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       IconButton(
                         icon: Icon(Icons.location_pin,
                             color: colorScheme.primary),
-                        onPressed: () {
-                          // handle geolocation tap
+                        onPressed: () async {
+                          await fetchLocation();
                         },
                       )
                     ],

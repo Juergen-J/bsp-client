@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../service/chat_service.dart';
-import 'open_map_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -34,6 +33,11 @@ class HomePage extends StatelessWidget {
                   },
                   child: const Text('Create chat'))
             ],
+            Container(
+              width: 500,
+              height: 500,
+              child: Placeholder(),
+            ),
             Container(
               width: 500,
               height: 500,

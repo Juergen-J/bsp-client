@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/page/modal/modal_service.dart';
 import 'package:berlin_service_portal/provider/messager_provider.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -45,5 +46,6 @@ void main() async {
       },
     ),
     ChangeNotifierProvider(create: (_) => AppState()),
+    ChangeNotifierProvider(create: (_) => ModalManager())
   ], child: const BSPApp()));
 }

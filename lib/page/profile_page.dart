@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../app/app_state.dart';
 import 'package:berlin_service_portal/model/user_info.dart';
 
 import '../service/auth_service.dart';
@@ -77,9 +76,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    var appState = Provider.of<AppState>(context);
-    final locales = appState.supportedLocales;
-
     return _isLoading
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
@@ -91,31 +87,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     'Personal Info',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-                ),
-                ExpansionTile(
-                  title: const Text(
-                    'Change Language',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: DropdownButton<Locale>(
-                        value: appState.locale,
-                        onChanged: (Locale? newLocale) {
-                          if (newLocale != null) {
-                            appState.changeLocale(newLocale);
-                          }
-                        },
-                        items: locales.map((locale) {
-                          return DropdownMenuItem(
-                            value: locale,
-                            child: Text(_getLanguageName(locale)),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
                 ),
                 ExpansionTile(
                   title: const Text(
@@ -213,16 +184,5 @@ class _ProfilePageState extends State<ProfilePage> {
       _userInfo = updatedUserInfo;
       _hasChanges = false;
     });
-  }
-
-  String _getLanguageName(Locale locale) {
-    switch (locale.languageCode) {
-      case 'en':
-        return 'English';
-      case 'ru':
-        return 'Русский';
-      default:
-        return locale.languageCode;
-    }
   }
 }

@@ -29,6 +29,7 @@ dependencies:
   jwt_decoder: ^2.0.1
   json_annotation: ^4.9.0
   pinput: ^5.0.1
+  flutter_svg: ^2.0.17
 
 dev_dependencies:
   flutter_test:
@@ -43,3 +44,11 @@ flutter:
   generate: true
   assets:
     - assets/icons/
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/noto_sans/NotoSans-Regular.ttf
+        - asset: assets/fonts/noto_sans/NotoSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/noto_sans/NotoSans-Bold.ttf
+          weight: 700

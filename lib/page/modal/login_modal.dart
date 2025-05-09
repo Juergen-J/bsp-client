@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../app/app_state.dart';
 import '../../service/auth_service.dart';
 import 'base_modal_wrapper.dart';
 import 'modal_service.dart';
@@ -27,6 +28,7 @@ class _LoginModalState extends State<LoginModal> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return BaseModalWrapper(
       isMobile: widget.isMobile,
@@ -36,18 +38,27 @@ class _LoginModalState extends State<LoginModal> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Einloggen', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 24),
-            const Text(
-              'Logge dich ein, um gebrauchte Schätze zu finden und zu verkaufen.',
-              textAlign: TextAlign.center,
+            Center(
+              child: Text(
+                'Einloggen',
+                style: textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                'Logge dich ein, um gebrauchte Schätze zu finden\nund zu verkaufen.',
+                style: textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
             ),
             const SizedBox(height: 24),
             _buildInputField(
               controller: _emailController,
               label: 'E-Mail',
-              icon: Icons.email,
+              icon: Icons.email_outlined,
               obscureText: false,
             ),
             const SizedBox(height: 16),
@@ -60,36 +71,40 @@ class _LoginModalState extends State<LoginModal> {
                 _obscurePassword = !_obscurePassword;
               }),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             if (_incorrectCredentials)
-              Text(
-                'Falscher Login oder Passwort',
-                style: TextStyle(color: colorScheme.error),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Text(
+                  'Falscher Login oder Passwort',
+                  style: TextStyle(color: colorScheme.error),
+                ),
               ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Noch kein Account? '),
+                Text('Noch kein Account? Erstelle ', style: textTheme.labelSmall),
                 GestureDetector(
                   onTap: () {
                     widget.onClose();
                     context.read<ModalManager>().show(ModalType.register);
                   },
                   child: Text(
-                    'Erstelle hier dein Konto.',
-                    style: TextStyle(
+                    'hier',
+                    style: textTheme.labelSmall?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
+                Text(' dein Konto.', style: textTheme.labelSmall),
               ],
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 56,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -118,20 +133,27 @@ class _LoginModalState extends State<LoginModal> {
                     }
                   }
                 },
-                child: const Text('Einloggen'),
+                child: const Text(
+                  'Einloggen',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                widget.onClose();
-                context.read<ModalManager>().show(ModalType.forgotPassword);
-              },
-              child: const Text(
-                'Passwort vergessen?',
-                style: TextStyle(decoration: TextDecoration.underline),
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  widget.onClose();
+                  context.read<ModalManager>().show(ModalType.forgotPassword);
+                },
+                child: Text(
+                  'Passwort vergessen?',
+                  style: textTheme.labelSmall?.copyWith(
+                    decoration: TextDecoration.none,
+                  ),
+                ),
               ),
-            ),
+            )
           ],
         ),
       ),
@@ -145,11 +167,10 @@ class _LoginModalState extends State<LoginModal> {
     required bool obscureText,
     VoidCallback? toggleObscure,
   }) {
+    final inputDecoration = context.watch<AppState>().inputFieldDecoration;
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(24),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: inputDecoration,
       child: TextFormField(
         controller: controller,
         obscureText: obscureText,
@@ -157,10 +178,10 @@ class _LoginModalState extends State<LoginModal> {
             value == null || value.isEmpty ? '$label eingeben' : null,
         decoration: InputDecoration(
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 18),
           border: InputBorder.none,
-          labelText: label,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          hintText: label,
+          hintStyle: const TextStyle(color: Colors.grey),
           suffixIcon: toggleObscure != null
               ? IconButton(icon: Icon(icon), onPressed: toggleObscure)
               : Icon(icon),

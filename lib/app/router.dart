@@ -150,28 +150,51 @@ List<Widget> buildStickyMessages(
     ValueListenableBuilder<bool>(
       valueListenable: isMessagesWindowOpen,
       builder: (context, isOpen, child) {
-        return Positioned(
-          right: kFABBottomOffset,
-          bottom: kMessagesWindowBottomOffset,
-          child: AnimatedOpacity(
-            opacity: isOpen ? 1 : 0,
-            duration: const Duration(milliseconds: 300),
-            child: IgnorePointer(
-              ignoring: !isOpen,
-              child: Material(
-                elevation: 8,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 300,
-                  height: 400,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const MessagesPage(),
+        if (!isOpen) return const SizedBox.shrink();
+
+        return Positioned.fill(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    isMessagesWindowOpen.value = false;
+                  },
+                  child: Container(color: Colors.black.withValues(alpha: 0.3)),
                 ),
               ),
-            ),
+              Positioned(
+                  right: kFABBottomOffset,
+                  bottom: kMessagesWindowBottomOffset + 64,
+                  child: Material(
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(12),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 300,
+                            height: 400,
+                            color: Colors.white,
+                            child: const MessagesPage(),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: IconButton(
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Закрыть',
+                              onPressed: () {
+                                isMessagesWindowOpen.value = false;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )),
+            ],
           ),
         );
       },

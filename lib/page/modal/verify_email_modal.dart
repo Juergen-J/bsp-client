@@ -28,25 +28,25 @@ class _VerifyEmailModalState extends State<VerifyEmailModal> {
 
   @override
   Widget build(BuildContext context) {
-    final width =
-        widget.isMobile ? MediaQuery.of(context).size.width * 0.9 : 400.0;
 
     final colorScheme = Theme.of(context).colorScheme;
 
     return BaseModalWrapper(
       isMobile: widget.isMobile,
       onClose: widget.onClose,
-      child: Form(
+      builder: (context) => Form(
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('E-Mail bestätigen',
-                style: Theme.of(context).textTheme.headlineSmall),
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               'Wir haben dir eine E-Mail mit einem Bestätigungscode an ${widget.email} gesendet.',
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 24),
             Pinput(
@@ -125,7 +125,7 @@ class _VerifyEmailModalState extends State<VerifyEmailModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Keine E-Mail erhalten? '),
+                Text('Keine E-Mail erhalten? ', style: Theme.of(context).textTheme.labelSmall),
                 GestureDetector(
                   onTap: () async {
                     final auth = context.read<AuthService>();
@@ -133,7 +133,7 @@ class _VerifyEmailModalState extends State<VerifyEmailModal> {
                   },
                   child: Text(
                     'Erneut senden',
-                    style: TextStyle(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),

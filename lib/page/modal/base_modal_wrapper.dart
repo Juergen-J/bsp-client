@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../app/app_state.dart';
 
 class BaseModalWrapper extends StatelessWidget {
   final Widget child;
@@ -10,12 +13,13 @@ class BaseModalWrapper extends StatelessWidget {
     super.key,
     required this.child,
     required this.isMobile,
-    this.maxWidth = 400,
+    this.maxWidth = 600,
     this.onClose,
   });
 
   @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
     final modalWidth =
         isMobile ? MediaQuery.of(context).size.width * 0.9 : maxWidth;
 
@@ -26,6 +30,10 @@ class BaseModalWrapper extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Container(
+              width: modalWidth,
+              padding: appState.modalPadding,
+              decoration: appState.modalDecoration,
+/*
               width: modalWidth,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
               decoration: BoxDecoration(
@@ -42,7 +50,7 @@ class BaseModalWrapper extends StatelessWidget {
                     offset: const Offset(0, 6),
                   ),
                 ],
-              ),
+              ),*/
               child: Stack(
                 children: [
                   child,

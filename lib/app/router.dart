@@ -39,18 +39,31 @@ final GoRouter router = GoRouter(
             double contentWidth =
                 constraints.maxWidth > 1290 ? 1290 : constraints.maxWidth;
             bool isMobile = constraints.maxWidth < 450;
+            bool isOnMessagesPage = _getSelectedIndex(context) == 2;
+
             bool showMessagesButton =
-                constraints.maxWidth > 800 && _getSelectedIndex(context) != 2;
-            double height = 60.0;
+                constraints.maxWidth > 800 && !isOnMessagesPage;
+            const double height = 60.0;
+            const double kFooterHeight = 120.0;
+            const double kFABBottomOffset = 24;
+            const double kMessagesWindowBottomOffset = 96;
 
             return Stack(
               children: [
                 isMobile
                     ? buildMobileScaffold(context, navigationShell,
                         contentWidth, colorScheme, appState, height)
-                    : buildDesktopScaffold(context, navigationShell,
-                        contentWidth, colorScheme, appState, height),
-                if (showMessagesButton) ...buildStickyMessages(height),
+                    : buildDesktopScaffold(
+                        context,
+                        navigationShell,
+                        contentWidth,
+                        colorScheme,
+                        appState,
+                        height,
+                        kFooterHeight),
+                if (showMessagesButton)
+                  ...buildStickyMessages(
+                      kFABBottomOffset, kMessagesWindowBottomOffset),
                 const ModalOverlay(),
               ],
             );
@@ -117,12 +130,13 @@ final GoRouter router = GoRouter(
   ],
 );
 
-List<Widget> buildStickyMessages(double height) {
+List<Widget> buildStickyMessages(
+    double kFABBottomOffset, double kMessagesWindowBottomOffset) {
   return [
     // Floating button
     Positioned(
-      right: 24,
-      bottom: height * 1.5,
+      right: kFABBottomOffset,
+      bottom: kMessagesWindowBottomOffset,
       child: FloatingActionButton(
         heroTag: null,
         onPressed: () {
@@ -137,8 +151,8 @@ List<Widget> buildStickyMessages(double height) {
       valueListenable: isMessagesWindowOpen,
       builder: (context, isOpen, child) {
         return Positioned(
-          right: 24,
-          bottom: 96, // можно заменить на height * 2.5 при желании
+          right: kFABBottomOffset,
+          bottom: kMessagesWindowBottomOffset,
           child: AnimatedOpacity(
             opacity: isOpen ? 1 : 0,
             duration: const Duration(milliseconds: 300),
@@ -167,13 +181,13 @@ List<Widget> buildStickyMessages(double height) {
 
 /// Desktop version (wide screen)
 Widget buildDesktopScaffold(
-  BuildContext context,
-  StatefulNavigationShell navigationShell,
-  double contentWidth,
-  ColorScheme colorScheme,
-  AppState appState,
-  double height,
-) {
+    BuildContext context,
+    StatefulNavigationShell navigationShell,
+    double contentWidth,
+    ColorScheme colorScheme,
+    AppState appState,
+    double height,
+    double kFooterHeight) {
   return Scaffold(
     backgroundColor: colorScheme.surface,
     appBar: CustomAppBar(
@@ -216,7 +230,7 @@ Widget buildDesktopScaffold(
                       ),
                     ),
                     FooterComponent(
-                        contentWidth: contentWidth, height: height * 2),
+                        contentWidth: contentWidth, height: kFooterHeight),
                   ],
                 ),
               ),

@@ -18,6 +18,10 @@ class StompClientNotifier extends ChangeNotifier {
   StompClientNotifier(this._authService);
 
   void connectStompClient() async {
+    if(!_authService.isLoggedIn){
+      print('user not logged');
+      return;
+    }
     await _authService.ensureTokenIsFresh();
     final token = _authService.accessToken;
     if (token == null) {

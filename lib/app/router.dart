@@ -11,7 +11,10 @@ import '../page/devices_page.dart';
 import '../page/home_page.dart';
 import '../page/messages_page.dart';
 import '../page/modal/modal_overlay.dart';
+import '../page/modal/modal_service.dart';
+import '../page/modal/modal_type.dart';
 import '../page/profile_page.dart';
+import '../service/auth_service.dart';
 import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
@@ -40,9 +43,11 @@ final GoRouter router = GoRouter(
                 constraints.maxWidth > 1290 ? 1290 : constraints.maxWidth;
             bool isMobile = constraints.maxWidth < 450;
             bool isOnMessagesPage = _getSelectedIndex(context) == 2;
+            bool isLoggedIn =
+                Provider.of<AuthService>(context, listen: false).isLoggedIn;
 
             bool showMessagesButton =
-                constraints.maxWidth > 800 && !isOnMessagesPage;
+                constraints.maxWidth > 800 && !isOnMessagesPage && isLoggedIn;
             const double height = 60.0;
             const double kFooterHeight = 120.0;
             const double kFABBottomOffset = 24;
@@ -94,6 +99,23 @@ final GoRouter router = GoRouter(
             GoRoute(
               path: '/messages',
               name: 'messages',
+              redirect: (context, state) {
+                final lastVisitedRoute = '/home';
+                final auth = Provider.of<AuthService>(context, listen: false);
+                final modal = Provider.of<ModalManager>(context, listen: false);
+
+                if (!auth.isLoggedIn) {
+                  // todo
+                  modal.redirectedFromRoute = state.matchedLocation;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final modal =
+                        Provider.of<ModalManager>(context, listen: false);
+                    modal.show(ModalType.login);
+                  });
+                  return lastVisitedRoute;
+                }
+                return null;
+              },
               builder: (context, state) => const MessagesPage(),
             ),
           ],

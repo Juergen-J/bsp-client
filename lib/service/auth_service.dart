@@ -1,10 +1,14 @@
 import 'dart:html' as html;
 import 'package:berlin_service_portal/model/user_info.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
+import 'package:provider/provider.dart';
 
 import '../model/login_response.dart';
+import '../page/modal/modal_service.dart';
+import '../page/modal/modal_type.dart';
 
 class AuthService extends ChangeNotifier {
   final String _host = FlavorConfig.instance.variables['beHost'];
@@ -341,6 +345,29 @@ class AuthService extends ChangeNotifier {
       print('Logout error: ${e.response?.statusCode} - ${e.response?.data}');
     }
   }
+}
+
+Future<bool> requireLoginIfNeeded(BuildContext context) async {
+  final auth = Provider.of<AuthService>(context, listen: false);
+  final modal = Provider.of<ModalManager>(context, listen: false);
+
+  if (auth.isLoggedIn) return true;
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    modal.show(ModalType.login);
+  });
+
+  const timeout = Duration(seconds: 10);
+  final startTime = DateTime.now();
+
+  while (!auth.isLoggedIn) {
+    await Future.delayed(const Duration(milliseconds: 250));
+
+    if (!context.mounted) return false;
+    if (DateTime.now().difference(startTime) > timeout) break;
+  }
+
+  return auth.isLoggedIn;
 }
 
 class AuthInterceptor extends Interceptor {

@@ -1,5 +1,6 @@
 import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollview_observer/scrollview_observer.dart';
@@ -20,13 +21,16 @@ class MessagesPageState extends State<MessagesPage> {
   late StompClient _stompClient;
   final ScrollController _scrollControllerMessage = ScrollController();
   final TextEditingController _controller = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   bool _showMessagesOnly = false;
 
   late StompClientNotifier stompProvider;
+  late final Future<bool> _loginCheckFuture;
 
   @override
   void initState() {
     super.initState();
+    _loginCheckFuture = requireLoginIfNeeded(context);
     _scrollControllerMessage.addListener(_scrollMessageListener);
 
     stompProvider = Provider.of<StompClientNotifier>(context, listen: false);
@@ -46,7 +50,6 @@ class MessagesPageState extends State<MessagesPage> {
         _runManualListObserve();
       }
 
-      // todo use report
       if (stompProvider.report.isNotEmpty) {
         final report = jsonDecode(stompProvider.report);
         messagesProv.fetchConversations();
@@ -81,7 +84,7 @@ class MessagesPageState extends State<MessagesPage> {
       if (_scrollControllerMessage.hasClients) {
         _scrollControllerMessage.animateTo(
           _scrollControllerMessage.position.maxScrollExtent,
-          duration: Duration(microseconds: 300),
+          duration: Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
@@ -90,7 +93,6 @@ class MessagesPageState extends State<MessagesPage> {
 
   void _runManualListObserve() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print("attempt ${DateTime.now()}");
       ListViewOnceObserveNotification().dispatch(_listViewContext);
     });
   }
@@ -99,6 +101,7 @@ class MessagesPageState extends State<MessagesPage> {
   void dispose() {
     _stompClient.deactivate();
     _controller.dispose();
+    _searchController.dispose();
     _scrollControllerMessage.removeListener(_scrollMessageListener);
     _scrollControllerMessage.dispose();
     super.dispose();
@@ -137,21 +140,43 @@ class MessagesPageState extends State<MessagesPage> {
 
   @override
   Widget build(BuildContext context) {
-    var colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
-        title: Text("Messages"),
-
+        automaticallyImplyLeading: false,
+        toolbarHeight: 110,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Nachrichten"),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Nachricht finden',
+                prefixIcon: Icon(Icons.search),
+                filled: true,
+                fillColor: colorScheme.surfaceVariant,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.symmetric(vertical: 0),
+              ),
+            ),
+          ],
+        ),
         leading: _showMessagesOnly
             ? IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            setState(() {
-              _showMessagesOnly = false;
-            });
-          },
-        )
+                icon: Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _showMessagesOnly = false;
+                  });
+                },
+              )
             : null,
       ),
       body: LayoutBuilder(
@@ -161,15 +186,21 @@ class MessagesPageState extends State<MessagesPage> {
                 ? _buildMessagesView(colorScheme)
                 : _buildConversationsView(colorScheme);
           } else {
-            return Row(
-              children: [
-                Container(
-                  width: 300,
-                  color: colorScheme.surfaceContainerHighest,
-                  child: _buildConversationsView(colorScheme),
+            return Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 1000),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 300,
+                      color: colorScheme.surfaceContainerHighest,
+                      child: _buildConversationsView(colorScheme),
+                    ),
+                    Expanded(child: _buildMessagesView(colorScheme)),
+                  ],
                 ),
-                Expanded(child: _buildMessagesView(colorScheme)),
-              ],
+              ),
             );
           }
         },
@@ -189,51 +220,79 @@ class MessagesPageState extends State<MessagesPage> {
 
         return Card(
           color: colorScheme.surface,
-          child: ListTile(
-            leading: Stack(
-              children: [
-                CircleAvatar(
-                  backgroundColor: colorScheme.primary,
-                  child: Icon(Icons.person, color: colorScheme.onPrimary),
-                ),
-                if (countUnreadMessages > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: colorScheme.error,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '$countUnreadMessages',
-                        style: TextStyle(color: colorScheme.onError),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            title: Text(
-              conversation['chatName'] ?? 'No name',
-              style: TextStyle(color: colorScheme.onSurface),
-            ),
-            subtitle: Text(
-              conversation['lastMessage'] ?? 'No message',
-              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
-            ),
+          elevation: 0,
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: InkWell(
             onTap: () {
-              setState(() {
-                final msgProv = context.read<MessagesProvider>();
-                msgProv.selectChat(conversation['chatId']);
-                // msgProv.clearMessages();
-                msgProv.fetchMessages();
+              final msgProv = context.read<MessagesProvider>();
+              msgProv.selectChat(conversation['chatId']);
+              msgProv.fetchMessages();
 
-                setState(() {
-                  _showMessagesOnly = true;
-                });
+              setState(() {
+                _showMessagesOnly = true;
               });
             },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              child: Row(
+                children: [
+                  Stack(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: colorScheme.primary,
+                        child: Icon(Icons.person, color: colorScheme.onPrimary),
+                      ),
+                      if (countUnreadMessages > 0)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          conversation['chatName'] ?? 'No name',
+                          style: TextStyle(
+                            fontWeight: countUnreadMessages > 0
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          conversation['lastMessage'] ?? '',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: TextStyle(
+                            color: colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    calculateConversationDate(conversation['lastMessageDate']),
+                    style: TextStyle(
+                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -245,20 +304,21 @@ class MessagesPageState extends State<MessagesPage> {
     final messages = messagesProv.messages;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [colorScheme.secondaryContainer, colorScheme.surface],
+                colors: [
+                  colorScheme.secondaryContainer,
+                  colorScheme.surface,
+                ],
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
               ),
             ),
             child: ListViewObserver(
               onObserve: (resultMap) {
-                print("observe ${DateTime.now()}");
                 List<String> unreadMessagesId = [];
                 var items = resultMap.displayingChildModelList;
                 for (var item in items) {
@@ -278,20 +338,17 @@ class MessagesPageState extends State<MessagesPage> {
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         _listViewContext = context;
-                        var userInfo =
+                        final userInfo =
                             Provider.of<AuthService>(context).getUserInfo();
-                        if (userInfo == null) {
-                          return Center(child: CircularProgressIndicator());
-                        }
                         final message = messages[index];
-                        final isCurrentUser = message['userId'] == userInfo!.id;
+                        final isCurrentUser = message['userId'] == userInfo?.id;
 
                         return Container(
                           alignment: isCurrentUser
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
-                          margin:
-                             const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 5, horizontal: 10),
                           child: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(

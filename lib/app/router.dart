@@ -11,7 +11,11 @@ import '../page/devices_page.dart';
 import '../page/home_page.dart';
 import '../page/messages_page.dart';
 import '../page/modal/modal_overlay.dart';
+import '../page/modal/modal_service.dart';
+import '../page/modal/modal_type.dart';
 import '../page/profile_page.dart';
+import '../service/auth_redirect_service.dart';
+import '../service/auth_service.dart';
 import 'app_state.dart';
 
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
@@ -39,169 +43,36 @@ final GoRouter router = GoRouter(
             double contentWidth =
                 constraints.maxWidth > 1290 ? 1290 : constraints.maxWidth;
             bool isMobile = constraints.maxWidth < 450;
-            double height = 60.0;
+            bool isOnMessagesPage = _getSelectedIndex(context) == 2;
+            bool isLoggedIn =
+                Provider.of<AuthService>(context, listen: false).isLoggedIn;
 
-            return Stack(children: [
-              Scaffold(
-                backgroundColor: colorScheme.surface,
-                appBar: CustomAppBar(
-                  isDarkMode: appState.isDarkMode,
-                  onThemeToggle: appState.toggleTheme,
-                  contentWidth: contentWidth,
-                  avatarKey: _avatarKey,
-                  languageKey: _languageKey,
-                  height: height,
-                ),
-                body: isMobile
-                    ? Column(
-                        children: [
-                          Expanded(child: navigationShell),
-                          SafeArea(
-                            child: BottomNavigationBar(
-                              backgroundColor: colorScheme.primary,
-                              fixedColor: colorScheme.secondary,
-                              unselectedItemColor: colorScheme.onPrimary,
-                              type: BottomNavigationBarType.fixed,
-                              currentIndex: _getSelectedIndex(context) ?? 0,
-                              onTap: (index) => navigationShell.goBranch(index),
-                              items: const [
-                                BottomNavigationBarItem(
-                                    icon: Icon(Icons.home), label: 'Home'),
-                                BottomNavigationBarItem(
-                                    icon: Icon(Icons.favorite),
-                                    label: 'Favorites'),
-                                BottomNavigationBarItem(
-                                    icon: Icon(Icons.message),
-                                    label: 'Messages'),
-                                BottomNavigationBarItem(
-                                    icon: Icon(Icons.devices),
-                                    label: 'Devices'),
-                                BottomNavigationBarItem(
-                                    icon: Icon(Icons.sell_rounded),
-                                    label: 'Services'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          return NotificationListener<ScrollNotification>(
-                            onNotification: (notification) => true,
-                            child: SingleChildScrollView(
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: constraints.maxHeight,
-                                ),
-                                child: IntrinsicHeight(
-                                  child: Column(
-                                    children: [
-                                      Material(
-                                        elevation: 4,
-                                        color: colorScheme.surface,
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: contentWidth,
-                                            child: TopNavigationMenu(
-                                                contentWidth: contentWidth,
-                                                height: height),
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: contentWidth,
-                                            child: Stack(
-                                              children: [
-                                                navigationShell,
-                                                Positioned(
-                                                  right: 16,
-                                                  bottom: 16,
-                                                  child: FloatingActionButton(
-                                                    heroTag: null,
-                                                    onPressed: () {
-                                                      isMessagesWindowOpen
-                                                              .value =
-                                                          !isMessagesWindowOpen
-                                                              .value;
-                                                    },
-                                                    child: const Icon(
-                                                        Icons.message),
-                                                  ),
-                                                ),
-                                                ValueListenableBuilder<bool>(
-                                                  valueListenable:
-                                                      isMessagesWindowOpen,
-                                                  builder:
-                                                      (context, isOpen, child) {
-                                                    return Positioned(
-                                                      right: 16,
-                                                      bottom: 80,
-                                                      child: AnimatedOpacity(
-                                                        opacity: isOpen ? 1 : 0,
-                                                        duration:
-                                                            const Duration(
-                                                                milliseconds:
-                                                                    300),
-                                                        child: IgnorePointer(
-                                                          ignoring: !isOpen,
-                                                          child: Material(
-                                                            elevation: 8,
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        12),
-                                                            child: Container(
-                                                              width: 300,
-                                                              height: 400,
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color: Colors
-                                                                    .white,
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            12),
-                                                              ),
-                                                              child:
-                                                                  const MessagesPage(),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      AnimatedSize(
-                                        duration:
-                                            const Duration(milliseconds: 300),
-                                        curve: Curves.easeInOut,
-                                        child: Container(
-                                          width: double.infinity,
-                                          color: colorScheme.primary,
-                                          child: Center(
-                                            child: FooterComponent(
-                                                contentWidth: contentWidth),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-              const ModalOverlay(),
-            ]);
+            bool showMessagesButton =
+                constraints.maxWidth > 800 && !isOnMessagesPage && isLoggedIn;
+            const double height = 60.0;
+            const double kFooterHeight = 120.0;
+            const double kFABBottomOffset = 24;
+            const double kMessagesWindowBottomOffset = 96;
+
+            return Stack(
+              children: [
+                isMobile
+                    ? buildMobileScaffold(context, navigationShell,
+                        contentWidth, colorScheme, appState, height)
+                    : buildDesktopScaffold(
+                        context,
+                        navigationShell,
+                        contentWidth,
+                        colorScheme,
+                        appState,
+                        height,
+                        kFooterHeight),
+                if (showMessagesButton)
+                  ...buildStickyMessages(
+                      kFABBottomOffset, kMessagesWindowBottomOffset),
+                const ModalOverlay(),
+              ],
+            );
           },
         );
       },
@@ -229,6 +100,21 @@ final GoRouter router = GoRouter(
             GoRoute(
               path: '/messages',
               name: 'messages',
+              redirect: (context, state) {
+                final auth = Provider.of<AuthService>(context, listen: false);
+                final modal = Provider.of<ModalManager>(context, listen: false);
+                final redirectService =
+                    Provider.of<AuthRedirectService>(context, listen: false);
+
+                if (!auth.isLoggedIn) {
+                  redirectService.saveRedirect(state.matchedLocation);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    modal.show(ModalType.login);
+                  });
+                  return '/home';
+                }
+                return null;
+              },
               builder: (context, state) => const MessagesPage(),
             ),
           ],
@@ -265,6 +151,200 @@ final GoRouter router = GoRouter(
   ],
 );
 
+List<Widget> buildStickyMessages(
+    double kFABBottomOffset, double kMessagesWindowBottomOffset) {
+  return [
+    // Floating button
+    Positioned(
+      right: kFABBottomOffset,
+      bottom: kMessagesWindowBottomOffset,
+      child: FloatingActionButton(
+        heroTag: null,
+        onPressed: () {
+          isMessagesWindowOpen.value = !isMessagesWindowOpen.value;
+        },
+        child: const Icon(Icons.message),
+      ),
+    ),
+
+    // Floating message window
+    ValueListenableBuilder<bool>(
+      valueListenable: isMessagesWindowOpen,
+      builder: (context, isOpen, child) {
+        if (!isOpen) return const SizedBox.shrink();
+
+        return Positioned.fill(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    isMessagesWindowOpen.value = false;
+                  },
+                  child: Container(color: Colors.black.withValues(alpha: 0.3)),
+                ),
+              ),
+              Positioned(
+                  right: kFABBottomOffset,
+                  bottom: kMessagesWindowBottomOffset + 64,
+                  child: Material(
+                    elevation: 8,
+                    borderRadius: BorderRadius.circular(12),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 300,
+                            height: 400,
+                            color: Colors.white,
+                            child: const MessagesPage(),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: IconButton(
+                              icon: const Icon(Icons.close),
+                              tooltip: 'Закрыть',
+                              onPressed: () {
+                                isMessagesWindowOpen.value = false;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )),
+            ],
+          ),
+        );
+      },
+    ),
+  ];
+}
+
+/// Desktop version (wide screen)
+Widget buildDesktopScaffold(
+    BuildContext context,
+    StatefulNavigationShell navigationShell,
+    double contentWidth,
+    ColorScheme colorScheme,
+    AppState appState,
+    double height,
+    double kFooterHeight) {
+  final auth = Provider.of<AuthService>(context);
+  final isLoggedIn = auth.isLoggedIn;
+
+  return Scaffold(
+    backgroundColor: colorScheme.surface,
+    appBar: CustomAppBar(
+      isDarkMode: appState.isDarkMode,
+      onThemeToggle: appState.toggleTheme,
+      contentWidth: contentWidth,
+      avatarKey: _avatarKey,
+      languageKey: _languageKey,
+      height: height,
+    ),
+    body: LayoutBuilder(
+      builder: (context, constraints) {
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) => true,
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    Material(
+                      elevation: 4,
+                      color: colorScheme.surface,
+                      child: Center(
+                        child: SizedBox(
+                          width: contentWidth,
+                          child: isLoggedIn
+                              ? TopNavigationMenu(
+                                  contentWidth: contentWidth,
+                                  height: height,
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: SizedBox(
+                          width: contentWidth,
+                          child: navigationShell,
+                        ),
+                      ),
+                    ),
+                    FooterComponent(
+                        contentWidth: contentWidth, height: kFooterHeight),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+/// Mobile version (narrow screen)
+Widget buildMobileScaffold(
+  BuildContext context,
+  StatefulNavigationShell navigationShell,
+  double contentWidth,
+  ColorScheme colorScheme,
+  AppState appState,
+  double height,
+) {
+  final auth = Provider.of<AuthService>(context);
+  final isLoggedIn = auth.isLoggedIn;
+
+  return Scaffold(
+    backgroundColor: colorScheme.surface,
+    appBar: CustomAppBar(
+      isDarkMode: appState.isDarkMode,
+      onThemeToggle: appState.toggleTheme,
+      contentWidth: contentWidth,
+      avatarKey: _avatarKey,
+      languageKey: _languageKey,
+      height: height,
+    ),
+    body: isLoggedIn
+        ? Column(
+            children: [
+              Expanded(child: navigationShell),
+              SafeArea(
+                child: BottomNavigationBar(
+                  backgroundColor: colorScheme.primary,
+                  fixedColor: colorScheme.secondary,
+                  unselectedItemColor: colorScheme.onPrimary,
+                  type: BottomNavigationBarType.fixed,
+                  currentIndex: _getSelectedIndex(context) ?? 0,
+                  onTap: (index) => navigationShell.goBranch(index),
+                  items: const [
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.home), label: 'Home'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.favorite), label: 'Favorites'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.message), label: 'Messages'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.devices), label: 'Devices'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.sell_rounded), label: 'Services'),
+                  ],
+                ),
+              ),
+            ],
+          )
+        : null,
+  );
+}
+
 int? _getSelectedIndex(BuildContext context) {
   final location =
       GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
@@ -283,24 +363,4 @@ int? _getSelectedIndex(BuildContext context) {
     default:
       return null;
   }
-}
-
-Widget _buildFloatingMessagesWindow() {
-  return Positioned(
-    right: 16,
-    bottom: 80,
-    child: Material(
-      elevation: 8,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 300,
-        height: 400,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const MessagesPage(),
-      ),
-    ),
-  );
 }

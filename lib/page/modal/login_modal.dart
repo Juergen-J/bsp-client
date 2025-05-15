@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../service/auth_redirect_service.dart';
 import '../../app/app_state.dart';
 import '../../service/auth_service.dart';
 import 'base_modal_wrapper.dart';
@@ -137,7 +139,19 @@ class _LoginModalState extends State<LoginModal> {
                       _passwordController.text.trim(),
                     );
                     if (error.isEmpty) {
+                      final redirectService =
+                          context.read<AuthRedirectService>();
+                      final router = GoRouter.of(context);
+                      final location =
+                          router.routerDelegate.currentConfiguration.uri.path;
+                      final routeToGo = redirectService.pendingRedirect;
+
                       widget.onClose();
+
+                      if (routeToGo != null && routeToGo != location) {
+                        redirectService.clearRedirect();
+                        router.go(routeToGo);
+                      }
                     } else if (error == 'unverified_mail') {
                       if (error == 'unverified_mail') {
                         context.read<ModalManager>().show(ModalType.verifyEmail,

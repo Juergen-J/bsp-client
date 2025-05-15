@@ -7,45 +7,47 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var userId;
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (1 == 1) ...[
-              Text('Hello User'),
-              SizedBox(
-                height: 10,
-              ),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Enter User ID',
-                  border: OutlineInputBorder(),
+    return SingleChildScrollView(
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (1 == 1) ...[
+                Text('Hello User'),
+                SizedBox(
+                  height: 10,
                 ),
-                onChanged: (value) {
-                  userId = value;
-                },
-              ),
-              OutlinedButton(
-                  onPressed: () async {
-                    await createChatWith(context, [userId]);
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Enter User ID',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    userId = value;
                   },
-                  child: const Text('Create chat'))
+                ),
+                OutlinedButton(
+                    onPressed: () async {
+                      await createChatWith(context, [userId]);
+                    },
+                    child: const Text('Create chat'))
+              ],
+              Container(
+                width: 500,
+                height: 500,
+                child: Placeholder(),
+              ),
+              Container(
+                width: 500,
+                height: 500,
+                child: Placeholder(),
+              )
             ],
-            Container(
-              width: 500,
-              height: 500,
-              child: Placeholder(),
-            ),
-            Container(
-              width: 500,
-              height: 500,
-              child: Placeholder(),
-            )
-          ],
-        ),
-      )
-    ]);
+          ),
+        )
+      ]),
+    );
   }
 }

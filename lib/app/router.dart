@@ -14,6 +14,7 @@ import '../page/modal/modal_overlay.dart';
 import '../page/modal/modal_service.dart';
 import '../page/modal/modal_type.dart';
 import '../page/profile_page.dart';
+import '../service/auth_redirect_service.dart';
 import '../service/auth_service.dart';
 import 'app_state.dart';
 
@@ -100,19 +101,17 @@ final GoRouter router = GoRouter(
               path: '/messages',
               name: 'messages',
               redirect: (context, state) {
-                final lastVisitedRoute = '/home';
                 final auth = Provider.of<AuthService>(context, listen: false);
                 final modal = Provider.of<ModalManager>(context, listen: false);
+                final redirectService =
+                    Provider.of<AuthRedirectService>(context, listen: false);
 
                 if (!auth.isLoggedIn) {
-                  // todo
-                  modal.redirectedFromRoute = state.matchedLocation;
+                  redirectService.saveRedirect(state.matchedLocation);
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    final modal =
-                        Provider.of<ModalManager>(context, listen: false);
                     modal.show(ModalType.login);
                   });
-                  return lastVisitedRoute;
+                  return '/home';
                 }
                 return null;
               },
@@ -233,6 +232,9 @@ Widget buildDesktopScaffold(
     AppState appState,
     double height,
     double kFooterHeight) {
+  final auth = Provider.of<AuthService>(context);
+  final isLoggedIn = auth.isLoggedIn;
+
   return Scaffold(
     backgroundColor: colorScheme.surface,
     appBar: CustomAppBar(
@@ -259,10 +261,12 @@ Widget buildDesktopScaffold(
                       child: Center(
                         child: SizedBox(
                           width: contentWidth,
-                          child: TopNavigationMenu(
-                            contentWidth: contentWidth,
-                            height: height,
-                          ),
+                          child: isLoggedIn
+                              ? TopNavigationMenu(
+                                  contentWidth: contentWidth,
+                                  height: height,
+                                )
+                              : null,
                         ),
                       ),
                     ),
@@ -296,6 +300,9 @@ Widget buildMobileScaffold(
   AppState appState,
   double height,
 ) {
+  final auth = Provider.of<AuthService>(context);
+  final isLoggedIn = auth.isLoggedIn;
+
   return Scaffold(
     backgroundColor: colorScheme.surface,
     appBar: CustomAppBar(
@@ -306,32 +313,35 @@ Widget buildMobileScaffold(
       languageKey: _languageKey,
       height: height,
     ),
-    body: Column(
-      children: [
-        Expanded(child: navigationShell),
-        SafeArea(
-          child: BottomNavigationBar(
-            backgroundColor: colorScheme.primary,
-            fixedColor: colorScheme.secondary,
-            unselectedItemColor: colorScheme.onPrimary,
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _getSelectedIndex(context) ?? 0,
-            onTap: (index) => navigationShell.goBranch(index),
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                  icon: Icon(Icons.favorite), label: 'Favorites'),
-              BottomNavigationBarItem(
-                  icon: Icon(Icons.message), label: 'Messages'),
-              BottomNavigationBarItem(
-                  icon: Icon(Icons.devices), label: 'Devices'),
-              BottomNavigationBarItem(
-                  icon: Icon(Icons.sell_rounded), label: 'Services'),
+    body: isLoggedIn
+        ? Column(
+            children: [
+              Expanded(child: navigationShell),
+              SafeArea(
+                child: BottomNavigationBar(
+                  backgroundColor: colorScheme.primary,
+                  fixedColor: colorScheme.secondary,
+                  unselectedItemColor: colorScheme.onPrimary,
+                  type: BottomNavigationBarType.fixed,
+                  currentIndex: _getSelectedIndex(context) ?? 0,
+                  onTap: (index) => navigationShell.goBranch(index),
+                  items: const [
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.home), label: 'Home'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.favorite), label: 'Favorites'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.message), label: 'Messages'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.devices), label: 'Devices'),
+                    BottomNavigationBarItem(
+                        icon: Icon(Icons.sell_rounded), label: 'Services'),
+                  ],
+                ),
+              ),
             ],
-          ),
-        ),
-      ],
-    ),
+          )
+        : null,
   );
 }
 

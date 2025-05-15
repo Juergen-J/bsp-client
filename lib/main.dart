@@ -1,5 +1,6 @@
 import 'package:berlin_service_portal/page/modal/modal_service.dart';
 import 'package:berlin_service_portal/provider/messager_provider.dart';
+import 'package:berlin_service_portal/service/auth_redirect_service.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
@@ -19,6 +20,7 @@ void main() async {
       variables: {"beHost": "localhost:8090"});
   setPathUrlStrategy();
   runApp(MultiProvider(providers: [
+    ChangeNotifierProvider(create: (_) => AuthRedirectService()),
     ChangeNotifierProvider(create: (_) => AuthService()),
     ChangeNotifierProxyProvider<AuthService, StompClientNotifier>(
       create: (context) {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../service/auth_service.dart';
 import 'base_modal_wrapper.dart';
+import 'modal_style_provider.dart';
 
 class ForgotPasswordModal extends StatefulWidget {
   final VoidCallback onClose;
@@ -35,33 +36,33 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
 
   @override
   Widget build(BuildContext context) {
-    final width =
-        widget.isMobile ? MediaQuery.of(context).size.width * 0.9 : 400.0;
     final colorScheme = Theme.of(context).colorScheme;
 
     return BaseModalWrapper(
       isMobile: widget.isMobile,
       onClose: widget.onClose,
-      child: Form(
+      builder: (context) => Form(
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         key: _formKey,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Passwort vergessen?',
-                  style: Theme.of(context).textTheme.headlineSmall),
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(
                 _showCodePart
                     ? 'Gib den Code aus der E-Mail ein und erstelle ein neues Passwort.'
                     : 'Gib deine E-Mail ein, um den Wiederherstellungscode zu erhalten.',
                 textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
               if (!_showCodePart)
                 _buildEmailStep(colorScheme)
               else
-                _buildResetStep(width, colorScheme),
+                _buildResetStep(colorScheme),
               const SizedBox(height: 8),
             ],
           ),
@@ -73,19 +74,17 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
   Widget _buildEmailStep(ColorScheme colorScheme) {
     return Column(
       children: [
-        TextFormField(
+        InputModalField(
           controller: _emailController,
-          decoration: InputDecoration(
-            labelText: 'E-Mail *',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            suffixIcon: const Icon(Icons.email),
-          ),
-          onChanged: (_) => _incorrectEmail = false,
+          label: 'E-Mail *',
+          icon: Icons.email_outlined,
+          obscureText: false,
           validator: (value) {
             if (value == null || value.isEmpty) return 'Bitte E-Mail eingeben';
             if (_incorrectEmail) return 'E-Mail existiert nicht';
             return null;
           },
+          onChanged: (_) => _incorrectEmail = false,
         ),
         const SizedBox(height: 24),
         _buildButton(
@@ -113,7 +112,7 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
     );
   }
 
-  Widget _buildResetStep(double width, ColorScheme colorScheme) {
+  Widget _buildResetStep(ColorScheme colorScheme) {
     return Column(
       children: [
         Pinput(
@@ -161,20 +160,21 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
         ),
         const SizedBox(height: 16),
         // Passwort
-        _buildPasswordField(
+        InputModalField(
           controller: _passwordController,
           label: 'Neues Passwort *',
-          obscure: _obscurePassword,
-          onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
+          obscureText: _obscurePassword,
+          toggleObscure: () =>
+              setState(() => _obscurePassword = !_obscurePassword),
         ),
         const SizedBox(height: 16),
 
         // Bestätigen
-        _buildPasswordField(
+        InputModalField(
           controller: _confirmPasswordController,
           label: 'Passwort bestätigen *',
-          obscure: _obscurePasswordConfirm,
-          onToggle: () => setState(
+          obscureText: _obscurePasswordConfirm,
+          toggleObscure: () => setState(
               () => _obscurePasswordConfirm = !_obscurePasswordConfirm),
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -219,20 +219,33 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
     required VoidCallback onToggle,
     FormFieldValidator<String>? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        suffixIcon: IconButton(
-          icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
-          onPressed: onToggle,
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      validator: validator ??
-          (value) =>
-              value == null || value.isEmpty ? 'Bitte $label eingeben' : null,
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+          suffixIcon: IconButton(
+            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
+            onPressed: onToggle,
+          ),
+        ),
+        validator: validator ??
+            (value) =>
+                value == null || value.isEmpty ? 'Bitte $label eingeben' : null,
+      ),
     );
   }
 

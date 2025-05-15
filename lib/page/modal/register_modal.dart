@@ -39,24 +39,27 @@ class _RegisterModalState extends State<RegisterModal> {
     return BaseModalWrapper(
       isMobile: widget.isMobile,
       onClose: widget.onClose,
-      child: Form(
+      builder: (context) => Form(
         key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Registriere dich bei 3D',
-                  style: Theme.of(context).textTheme.headlineSmall),
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Fülle die Felder aus, um dein Konto zu erstellen.',
+                style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              _buildTextField(
-                label: 'E-Mail',
+              const SizedBox(height: 16),
+              InputModalField(
                 controller: _emailController,
-                icon: Icons.email,
+                label: 'E-Mail',
+                icon: Icons.email_outlined,
+                obscureText: false,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Bitte E-Mail eingeben';
@@ -67,32 +70,34 @@ class _RegisterModalState extends State<RegisterModal> {
                 },
                 onChanged: (_) => _emailExists = false,
               ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Vorname',
+              const SizedBox(height: 12),
+              InputModalField(
                 controller: _firstnameController,
+                label: 'Vorname',
+                obscureText: false,
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Bitte Vorname eingeben' : null,
               ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Nachname',
+              const SizedBox(height: 12),
+              InputModalField(
                 controller: _lastnameController,
+                label: 'Nachname',
+                obscureText: false,
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Bitte Nachname eingeben' : null,
               ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Passwort',
+              const SizedBox(height: 12),
+              InputModalField(
                 controller: _passwordController,
+                label: 'Passwort',
                 obscureText: _obscurePassword,
                 toggleObscure: () =>
                     setState(() => _obscurePassword = !_obscurePassword),
               ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                label: 'Passwort bestätigen',
+              const SizedBox(height: 12),
+              InputModalField(
                 controller: _confirmPasswordController,
+                label: 'Passwort bestätigen',
                 obscureText: _obscurePasswordConfirm,
                 toggleObscure: () => setState(() {
                   _obscurePasswordConfirm = !_obscurePasswordConfirm;
@@ -107,7 +112,7 @@ class _RegisterModalState extends State<RegisterModal> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -137,30 +142,34 @@ class _RegisterModalState extends State<RegisterModal> {
                         });
                       } else {
                         widget.onClose();
-                        context
-                            .read<ModalManager>()
-                            .show(ModalType.verifyEmail, data: _emailController.text.trim());
+                        context.read<ModalManager>().show(ModalType.verifyEmail,
+                            data: _emailController.text.trim());
                       }
                     }
                   },
-                  child: const Text('Registrieren'),
+                  child: const Text('Registrieren',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Bereits ein Konto? '),
-                  GestureDetector(
-                    onTap: () {
-                      widget.onClose();
-                      context.read<ModalManager>().show(ModalType.login);
-                    },
-                    child: Text(
-                      'Einloggen',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                  Text('Bereits ein Konto? ',
+                      style: Theme.of(context).textTheme.labelSmall),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () {
+                        widget.onClose();
+                        context.read<ModalManager>().show(ModalType.login);
+                      },
+                      child: Text(
+                        'Einloggen',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                     ),
                   ),
@@ -169,45 +178,6 @@ class _RegisterModalState extends State<RegisterModal> {
               const SizedBox(height: 8),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    IconData? icon,
-    bool obscureText = false,
-    VoidCallback? toggleObscure,
-    FormFieldValidator<String>? validator,
-    void Function(String)? onChanged,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        validator: validator,
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          border: InputBorder.none,
-          labelText: label,
-          suffixIcon: toggleObscure != null
-              ? IconButton(
-                  icon: Icon(
-                    obscureText ? Icons.visibility_off : Icons.visibility,
-                  ),
-                  onPressed: toggleObscure,
-                )
-              : icon != null
-                  ? Icon(icon)
-                  : null,
         ),
       ),
     );

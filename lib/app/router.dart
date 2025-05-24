@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../model/short_device.dart';
 import '../page/component/app_bar_component.dart';
 import '../page/component/footer_component.dart';
+import '../page/component/sticky_menu_delegate.dart';
 import '../page/component/top_navigation_menu.dart';
 import '../page/device_form_page.dart';
 import '../page/devices_page.dart';
@@ -223,6 +224,7 @@ List<Widget> buildStickyMessages(
   ];
 }
 
+
 /// Desktop version (wide screen)
 Widget buildDesktopScaffold(
     BuildContext context,
@@ -245,48 +247,41 @@ Widget buildDesktopScaffold(
       languageKey: _languageKey,
       height: height,
     ),
-    body: LayoutBuilder(
-      builder: (context, constraints) {
-        return NotificationListener<ScrollNotification>(
-          onNotification: (notification) => true,
-          child: SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: IntrinsicHeight(
-                child: Column(
-                  children: [
-                    Material(
-                      elevation: 4,
-                      color: colorScheme.surface,
-                      child: Center(
-                        child: SizedBox(
-                          width: contentWidth,
-                          child: isLoggedIn
-                              ? TopNavigationMenu(
-                                  contentWidth: contentWidth,
-                                  height: height,
-                                )
-                              : null,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: SizedBox(
-                          width: contentWidth,
-                          child: navigationShell,
-                        ),
-                      ),
-                    ),
-                    FooterComponent(
-                        contentWidth: contentWidth, height: kFooterHeight),
-                  ],
-                ),
+    body: CustomScrollView(
+      slivers: [
+        if (isLoggedIn)
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: StickyMenuDelegate(
+              height: height,
+              child: TopNavigationMenu(
+                contentWidth: contentWidth,
+                height: height,
               ),
             ),
           ),
-        );
-      },
+
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: SizedBox(
+                    width: contentWidth,
+                    child: navigationShell,
+                  ),
+                ),
+              ),
+
+              FooterComponent(
+                contentWidth: contentWidth,
+                height: kFooterHeight,
+              ),
+            ],
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -364,3 +359,4 @@ int? _getSelectedIndex(BuildContext context) {
       return null;
   }
 }
+

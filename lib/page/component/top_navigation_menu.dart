@@ -42,16 +42,19 @@ class TopNavigationMenu extends StatelessWidget implements PreferredSizeWidget {
                 final isSelected = currentPath.startsWith(item.path);
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: GestureDetector(
-                    onTap: () => context.go(item.path),
-                    child: Text(
-                      item.label,
-                      style: textStyle?.copyWith(
-                        color: isSelected
-                            ? colorScheme.primary
-                            : colorScheme.onSurface,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => context.go(item.path),
+                      child: Text(
+                        item.label,
+                        style: textStyle?.copyWith(
+                          color: isSelected
+                              ? colorScheme.primary
+                              : colorScheme.onSurface,
+                          fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),

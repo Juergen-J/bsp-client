@@ -20,13 +20,17 @@ class ShortDevice {
 
   final List<AttributePresent> attributes;
 
-  ShortDevice(
-      {required this.id,
-      required this.deviceType,
-      required this.brand,
-      this.skuCode,
-      required this.name,
-      this.attributes = const []});
+  final String? imagePath;
+
+  ShortDevice({
+    required this.id,
+    required this.deviceType,
+    required this.brand,
+    this.skuCode,
+    required this.name,
+    this.attributes = const [],
+    this.imagePath,
+  });
 
   factory ShortDevice.fromJson(Map<String, dynamic> json) =>
       _$ShortDeviceFromJson(json);

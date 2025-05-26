@@ -4,11 +4,15 @@ import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../model/brand.dart';
+import '../model/device_type.dart';
 import '../model/short_device.dart';
 import '../service/auth_service.dart';
+import '../widgets/cards/add_device_card.dart';
+import '../widgets/cards/device_card.dart';
 
 class DevicesPage extends StatefulWidget {
-  const DevicesPage({Key? key}) : super(key: key);
+  const DevicesPage({super.key});
 
   @override
   _DevicesPageState createState() => _DevicesPageState();
@@ -20,7 +24,7 @@ class _DevicesPageState extends State<DevicesPage> {
   @override
   void initState() {
     super.initState();
-    fetchMyDevices();
+    loadMockDevices();
   }
 
   Future<void> fetchMyDevices() async {
@@ -40,6 +44,31 @@ class _DevicesPageState extends State<DevicesPage> {
     }
   }
 
+  void loadMockDevices() {
+    setState(() {
+      _devices = [
+        ShortDevice(
+          id: '1',
+          name: 'Prusa i3 MK3',
+          deviceType: DeviceType(
+              id: 'printer', displayName: '3D Printer', systemName: ''),
+          brand: Brand(id: 'prusa', name: 'Prusa'),
+          attributes: [],
+          imagePath: 'assets/images/Foto.png',
+        ),
+        ShortDevice(
+          id: '2',
+          name: 'Ender 3 Pro',
+          deviceType: DeviceType(
+              id: 'printer', displayName: '3D Printer', systemName: ''),
+          brand: Brand(id: 'creality', name: 'Creality'),
+          attributes: [],
+          imagePath: 'assets/images/Foto.png',
+        ),
+      ];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,87 +79,30 @@ class _DevicesPageState extends State<DevicesPage> {
         padding: const EdgeInsets.all(12.0),
         child: GridView.builder(
           itemCount: _devices.length + 1,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 300, // ширина карточки = максимум 300
             mainAxisSpacing: 12,
-            childAspectRatio: 0.8,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 330, // фиксированная высота карточки
           ),
           itemBuilder: (context, index) {
             if (index == _devices.length) {
-              return GestureDetector(
+              return AddDeviceCard(
                 onTap: () async {
-                  final resul = await context.push('/device-form');
-                  if (resul == true) fetchMyDevices();
+                  final result = await context.push('/device-form');
+                  if (result == true) loadMockDevices();
                 },
-                child: Card(
-                  color: Colors.green[50],
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.0),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add, size: 40, color: Colors.green),
-                        SizedBox(height: 8),
-                        Text("Add new device",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w500)),
-                      ],
-                    ),
-                  ),
-                ),
               );
             }
 
             final device = _devices[index];
-            return GestureDetector(
+            return DeviceCard(
+              device: device,
               onTap: () async {
                 final result =
                     await context.push('/device-form', extra: device);
-                if (result == true) fetchMyDevices();
+                if (result == true) loadMockDevices();
               },
-              child: Card(
-                elevation: 6,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 80,
-                        width: double.infinity,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.print,
-                            size: 40, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        device.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Chip(
-                        label: Text(device.deviceType.displayName),
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             );
           },
         ),

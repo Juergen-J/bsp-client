@@ -28,9 +28,41 @@ class _RegisterModalState extends State<RegisterModal> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  final _emailFocus = FocusNode();
+  final _firstNameFocus = FocusNode();
+  final _lastNameFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _confirmPasswordFocus = FocusNode();
+
   bool _emailExists = false;
   bool _obscurePassword = true;
   bool _obscurePasswordConfirm = true;
+
+  void _submit() async {
+    FocusScope.of(context).unfocus();
+    if (_formKey.currentState!.validate()) {
+      final authService = context.read<AuthService>();
+      final error = await authService.signUp(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        _firstnameController.text.trim(),
+        _lastnameController.text.trim(),
+      );
+
+      if (error.isNotEmpty) {
+        setState(() {
+          _emailExists = true;
+          _formKey.currentState!.validate();
+        });
+      } else {
+        widget.onClose();
+        context.read<ModalManager>().show(
+          ModalType.verifyEmail,
+          data: _emailController.text.trim(),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +90,11 @@ class _RegisterModalState extends State<RegisterModal> {
               InputModalField(
                 controller: _emailController,
                 label: 'E-Mail',
-                icon: Icons.email_outlined,
                 obscureText: false,
+                focusNode: _emailFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_firstNameFocus),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Bitte E-Mail eingeben';
@@ -75,16 +110,24 @@ class _RegisterModalState extends State<RegisterModal> {
                 controller: _firstnameController,
                 label: 'Vorname',
                 obscureText: false,
+                focusNode: _firstNameFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_lastNameFocus),
                 validator: (v) =>
-                    v == null || v.isEmpty ? 'Bitte Vorname eingeben' : null,
+                v == null || v.isEmpty ? 'Bitte Vorname eingeben' : null,
               ),
               const SizedBox(height: 12),
               InputModalField(
                 controller: _lastnameController,
                 label: 'Nachname',
                 obscureText: false,
+                focusNode: _lastNameFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_passwordFocus),
                 validator: (v) =>
-                    v == null || v.isEmpty ? 'Bitte Nachname eingeben' : null,
+                v == null || v.isEmpty ? 'Bitte Nachname eingeben' : null,
               ),
               const SizedBox(height: 12),
               InputModalField(
@@ -93,6 +136,10 @@ class _RegisterModalState extends State<RegisterModal> {
                 obscureText: _obscurePassword,
                 toggleObscure: () =>
                     setState(() => _obscurePassword = !_obscurePassword),
+                focusNode: _passwordFocus,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) =>
+                    FocusScope.of(context).requestFocus(_confirmPasswordFocus),
               ),
               const SizedBox(height: 12),
               InputModalField(
@@ -102,6 +149,9 @@ class _RegisterModalState extends State<RegisterModal> {
                 toggleObscure: () => setState(() {
                   _obscurePasswordConfirm = !_obscurePasswordConfirm;
                 }),
+                focusNode: _confirmPasswordFocus,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Bitte Passwort bestätigen';
@@ -124,29 +174,7 @@ class _RegisterModalState extends State<RegisterModal> {
                       borderRadius: BorderRadius.circular(32),
                     ),
                   ),
-                  onPressed: () async {
-                    FocusScope.of(context).unfocus();
-                    if (_formKey.currentState!.validate()) {
-                      final authService = context.read<AuthService>();
-                      final error = await authService.signUp(
-                        _emailController.text.trim(),
-                        _passwordController.text.trim(),
-                        _firstnameController.text.trim(),
-                        _lastnameController.text.trim(),
-                      );
-
-                      if (error.isNotEmpty) {
-                        setState(() {
-                          _emailExists = true;
-                          _formKey.currentState!.validate();
-                        });
-                      } else {
-                        widget.onClose();
-                        context.read<ModalManager>().show(ModalType.verifyEmail,
-                            data: _emailController.text.trim());
-                      }
-                    }
-                  },
+                  onPressed: _submit,
                   child: const Text('Registrieren',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
@@ -167,9 +195,9 @@ class _RegisterModalState extends State<RegisterModal> {
                       child: Text(
                         'Einloggen',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),

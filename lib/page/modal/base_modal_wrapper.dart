@@ -74,6 +74,8 @@ class InputModalField extends StatelessWidget {
   final FormFieldValidator<String>? validator;
   final void Function(String)? onChanged;
   final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final void Function(String)? onFieldSubmitted;
 
   const InputModalField({
     super.key,
@@ -85,6 +87,8 @@ class InputModalField extends StatelessWidget {
     this.validator,
     this.onChanged,
     this.focusNode,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -111,9 +115,11 @@ class InputModalField extends StatelessWidget {
             obscureText: obscureText,
             onChanged: onChanged,
             validator: validator ??
-                (value) =>
-                    value == null || value.isEmpty ? '$label eingeben' : null,
+                    (value) =>
+                value == null || value.isEmpty ? '$label eingeben' : null,
             style: TextStyle(color: colorScheme.onSurface),
+            textInputAction: textInputAction,
+            onFieldSubmitted: onFieldSubmitted,
             decoration: InputDecoration(
               isDense: true,
               labelText: label,
@@ -123,17 +129,17 @@ class InputModalField extends StatelessWidget {
                   : null,
               suffixIcon: toggleObscure != null
                   ? IconButton(
-                      icon: Icon(
-                        obscureText ? Icons.visibility_off : Icons.visibility,
-                        color: colorScheme.onSurface,
-                      ),
-                      onPressed: toggleObscure,
-                    )
+                icon: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: colorScheme.onSurface,
+                ),
+                onPressed: toggleObscure,
+              )
                   : null,
               errorStyle: const TextStyle(height: 1.2, color: Colors.red),
               border: InputBorder.none,
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             ),
           ),
         ),

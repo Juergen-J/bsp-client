@@ -24,11 +24,35 @@ class VerifyEmailModal extends StatefulWidget {
 class _VerifyEmailModalState extends State<VerifyEmailModal> {
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
+  final FocusNode _codeFocus = FocusNode();
+
   bool _incorrectCode = false;
 
   @override
-  Widget build(BuildContext context) {
+  void dispose() {
+    _codeController.dispose();
+    _codeFocus.dispose();
+    super.dispose();
+  }
 
+  Future<void> _verifyCode() async {
+    if (_formKey.currentState!.validate()) {
+      final auth = context.read<AuthService>();
+      final error = await auth.verifyEmail(
+        widget.email.trim(),
+        _codeController.text.trim(),
+      );
+      if (error.isNotEmpty) {
+        setState(() => _incorrectCode = true);
+        _formKey.currentState!.validate();
+      } else {
+        widget.onClose();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return BaseModalWrapper(
@@ -53,7 +77,13 @@ class _VerifyEmailModalState extends State<VerifyEmailModal> {
               controller: _codeController,
               length: 6,
               autofocus: true,
-              onChanged: (_) => _incorrectCode = false,
+              focusNode: _codeFocus,
+              onChanged: (_) {
+                if (_incorrectCode) {
+                  setState(() => _incorrectCode = false);
+                }
+              },
+              onSubmitted: (_) => _verifyCode(),
               validator: (value) {
                 if ((value?.length ?? 0) < 6 || _incorrectCode) {
                   return 'Code ist ungültig';
@@ -103,21 +133,7 @@ class _VerifyEmailModalState extends State<VerifyEmailModal> {
                     borderRadius: BorderRadius.circular(32),
                   ),
                 ),
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    final auth = context.read<AuthService>();
-                    final error = await auth.verifyEmail(
-                      widget.email.trim(),
-                      _codeController.text.trim(),
-                    );
-                    if (error.isNotEmpty) {
-                      setState(() => _incorrectCode = true);
-                      _formKey.currentState!.validate();
-                    } else {
-                      widget.onClose();
-                    }
-                  }
-                },
+                onPressed: _verifyCode,
                 child: const Text('E-Mail bestätigen'),
               ),
             ),
@@ -125,7 +141,8 @@ class _VerifyEmailModalState extends State<VerifyEmailModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Keine E-Mail erhalten? ', style: Theme.of(context).textTheme.labelSmall),
+                Text('Keine E-Mail erhalten? ',
+                    style: Theme.of(context).textTheme.labelSmall),
                 GestureDetector(
                   onTap: () async {
                     final auth = context.read<AuthService>();

@@ -36,6 +36,37 @@ class _LoginModalState extends State<LoginModal> {
     super.dispose();
   }
 
+  void _submit() async {
+    setState(() => _incorrectCredentials = false);
+    if (_formKey.currentState!.validate()) {
+      final auth = context.read<AuthService>();
+      final error = await auth.login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+      if (error.isEmpty) {
+        final redirectService = context.read<AuthRedirectService>();
+        final router = GoRouter.of(context);
+        final location = router.routerDelegate.currentConfiguration.uri.path;
+        final routeToGo = redirectService.pendingRedirect;
+
+        widget.onClose();
+
+        if (routeToGo != null && routeToGo != location) {
+          redirectService.clearRedirect();
+          router.go(routeToGo);
+        }
+      } else if (error == 'unverified_mail') {
+        context.read<ModalManager>().show(
+          ModalType.verifyEmail,
+          data: _emailController.text.trim(),
+        );
+      } else {
+        setState(() => _incorrectCredentials = true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -70,8 +101,11 @@ class _LoginModalState extends State<LoginModal> {
             InputModalField(
               controller: _emailController,
               label: 'E-Mail',
-              icon: Icons.email_outlined,
               obscureText: false,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) {
+                FocusScope.of(context).requestFocus(_passwordFocusNode);
+              },
             ),
             const SizedBox(height: 16),
             InputModalField(
@@ -83,6 +117,8 @@ class _LoginModalState extends State<LoginModal> {
                 _obscurePassword = !_obscurePassword;
               }),
               focusNode: _passwordFocusNode,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 12),
             if (_incorrectCredentials)
@@ -97,8 +133,7 @@ class _LoginModalState extends State<LoginModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Noch kein Account? Erstelle ',
-                    style: textTheme.labelSmall),
+                Text('Noch kein Account? Erstelle ', style: textTheme.labelSmall),
                 MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
@@ -130,38 +165,7 @@ class _LoginModalState extends State<LoginModal> {
                     borderRadius: BorderRadius.circular(32),
                   ),
                 ),
-                onPressed: () async {
-                  setState(() => _incorrectCredentials = false);
-                  if (_formKey.currentState!.validate()) {
-                    final auth = context.read<AuthService>();
-                    final error = await auth.login(
-                      _emailController.text.trim(),
-                      _passwordController.text.trim(),
-                    );
-                    if (error.isEmpty) {
-                      final redirectService =
-                          context.read<AuthRedirectService>();
-                      final router = GoRouter.of(context);
-                      final location =
-                          router.routerDelegate.currentConfiguration.uri.path;
-                      final routeToGo = redirectService.pendingRedirect;
-
-                      widget.onClose();
-
-                      if (routeToGo != null && routeToGo != location) {
-                        redirectService.clearRedirect();
-                        router.go(routeToGo);
-                      }
-                    } else if (error == 'unverified_mail') {
-                      if (error == 'unverified_mail') {
-                        context.read<ModalManager>().show(ModalType.verifyEmail,
-                            data: _emailController.text.trim());
-                      }
-                    } else {
-                      setState(() => _incorrectCredentials = true);
-                    }
-                  }
-                },
+                onPressed: _submit,
                 child: const Text(
                   'Einloggen',
                   style: TextStyle(fontWeight: FontWeight.w600),

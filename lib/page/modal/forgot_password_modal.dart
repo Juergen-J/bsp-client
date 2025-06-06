@@ -28,11 +28,31 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  final _emailFocus = FocusNode();
+  final _codeFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  final _confirmPasswordFocus = FocusNode();
+
   bool _incorrectCode = false;
   bool _incorrectEmail = false;
   bool _obscurePassword = true;
   bool _obscurePasswordConfirm = true;
   bool _showCodePart = false;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+
+    _emailFocus.dispose();
+    _codeFocus.dispose();
+    _passwordFocus.dispose();
+    _confirmPasswordFocus.dispose();
+
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,39 +97,52 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
         InputModalField(
           controller: _emailController,
           label: 'E-Mail *',
-          icon: Icons.email_outlined,
           obscureText: false,
+          focusNode: _emailFocus,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) async {
+            await _requestCode();
+          },
           validator: (value) {
             if (value == null || value.isEmpty) return 'Bitte E-Mail eingeben';
             if (_incorrectEmail) return 'E-Mail existiert nicht';
             return null;
           },
-          onChanged: (_) => _incorrectEmail = false,
+          onChanged: (_) {
+            if (_incorrectEmail) {
+              setState(() => _incorrectEmail = false);
+            }
+          },
         ),
         const SizedBox(height: 24),
         _buildButton(
           label: 'Code anfordern',
           colorScheme: colorScheme,
-          onPressed: () async {
-            if (_formKey.currentState!.validate()) {
-              final auth = context.read<AuthService>();
-              final error = await auth.sendPasswordRecoveryCode(
-                _emailController.text.trim(),
-              );
-              if (error.isEmpty) {
-                setState(() {
-                  _showCodePart = true;
-                  _incorrectEmail = false;
-                });
-              } else {
-                setState(() => _incorrectEmail = true);
-                _formKey.currentState!.validate();
-              }
-            }
-          },
+          onPressed: _requestCode,
         ),
       ],
     );
+  }
+
+  Future<void> _requestCode() async {
+    if (_formKey.currentState!.validate()) {
+      final auth = context.read<AuthService>();
+      final error = await auth.sendPasswordRecoveryCode(
+        _emailController.text.trim(),
+      );
+      if (error.isEmpty) {
+        setState(() {
+          _showCodePart = true;
+          _incorrectEmail = false;
+        });
+        FocusScope.of(context).requestFocus(_codeFocus);
+      } else {
+        setState(() {
+          _incorrectEmail = true;
+        });
+        _formKey.currentState!.validate();
+      }
+    }
   }
 
   Widget _buildResetStep(ColorScheme colorScheme) {
@@ -119,12 +152,20 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
           controller: _codeController,
           length: 6,
           autofocus: true,
-          onChanged: (_) => _incorrectCode = false,
+          focusNode: _codeFocus,
+          onChanged: (_) {
+            if (_incorrectCode) {
+              setState(() => _incorrectCode = false);
+            }
+          },
           validator: (value) {
             if ((value?.length ?? 0) < 6 || _incorrectCode) {
               return 'Falscher Code';
             }
             return null;
+          },
+          onSubmitted: (_) {
+            FocusScope.of(context).requestFocus(_passwordFocus);
           },
           defaultPinTheme: PinTheme(
             width: 56,
@@ -159,23 +200,25 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
           ),
         ),
         const SizedBox(height: 16),
-        // Passwort
+
         InputModalField(
           controller: _passwordController,
           label: 'Neues Passwort *',
           obscureText: _obscurePassword,
-          toggleObscure: () =>
-              setState(() => _obscurePassword = !_obscurePassword),
+          toggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+          focusNode: _passwordFocus,
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) {
+            FocusScope.of(context).requestFocus(_confirmPasswordFocus);
+          },
         ),
         const SizedBox(height: 16),
 
-        // Bestätigen
         InputModalField(
           controller: _confirmPasswordController,
           label: 'Passwort bestätigen *',
           obscureText: _obscurePasswordConfirm,
-          toggleObscure: () => setState(
-              () => _obscurePasswordConfirm = !_obscurePasswordConfirm),
+          toggleObscure: () => setState(() => _obscurePasswordConfirm = !_obscurePasswordConfirm),
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Bitte Passwort bestätigen';
@@ -185,68 +228,36 @@ class _ForgotPasswordModalState extends State<ForgotPasswordModal> {
             }
             return null;
           },
+          focusNode: _confirmPasswordFocus,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _resetPassword(),
         ),
         const SizedBox(height: 24),
 
         _buildButton(
           label: 'Passwort zurücksetzen',
           colorScheme: colorScheme,
-          onPressed: () async {
-            if (_formKey.currentState!.validate()) {
-              final auth = context.read<AuthService>();
-              final error = await auth.recoverPassword(
-                _emailController.text.trim(),
-                _codeController.text.trim(),
-                _passwordController.text,
-              );
-              if (error.isEmpty) {
-                widget.onClose();
-              } else {
-                setState(() => _incorrectCode = true);
-                _formKey.currentState!.validate();
-              }
-            }
-          },
+          onPressed: _resetPassword,
         ),
       ],
     );
   }
 
-  Widget _buildPasswordField({
-    required TextEditingController controller,
-    required String label,
-    required bool obscure,
-    required VoidCallback onToggle,
-    FormFieldValidator<String>? validator,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscure,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-          suffixIcon: IconButton(
-            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
-            onPressed: onToggle,
-          ),
-        ),
-        validator: validator ??
-            (value) =>
-                value == null || value.isEmpty ? 'Bitte $label eingeben' : null,
-      ),
-    );
+  Future<void> _resetPassword() async {
+    if (_formKey.currentState!.validate()) {
+      final auth = context.read<AuthService>();
+      final error = await auth.recoverPassword(
+        _emailController.text.trim(),
+        _codeController.text.trim(),
+        _passwordController.text,
+      );
+      if (error.isEmpty) {
+        widget.onClose();
+      } else {
+        setState(() => _incorrectCode = true);
+        _formKey.currentState!.validate();
+      }
+    }
   }
 
   Widget _buildButton({

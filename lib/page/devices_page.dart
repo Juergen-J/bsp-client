@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
@@ -10,6 +12,8 @@ import '../model/short_device.dart';
 import '../service/auth_service.dart';
 import '../widgets/cards/add_device_card.dart';
 import '../widgets/cards/device_card.dart';
+import 'modal/modal_service.dart';
+import 'modal/modal_type.dart';
 
 class DevicesPage extends StatefulWidget {
   const DevicesPage({super.key});
@@ -24,7 +28,7 @@ class _DevicesPageState extends State<DevicesPage> {
   @override
   void initState() {
     super.initState();
-    loadMockDevices();
+    fetchMyDevices();
   }
 
   Future<void> fetchMyDevices() async {
@@ -42,31 +46,6 @@ class _DevicesPageState extends State<DevicesPage> {
       print(
           'Error loading devices: ${response.statusCode} - ${response.statusMessage}');
     }
-  }
-
-  void loadMockDevices() {
-    setState(() {
-      _devices = [
-        ShortDevice(
-          id: '1',
-          name: 'Prusa i3 MK3',
-          deviceType: DeviceType(
-              id: 'printer', displayName: '3D Printer', systemName: ''),
-          brand: Brand(id: 'prusa', name: 'Prusa'),
-          attributes: [],
-          imagePath: 'assets/images/Foto.png',
-        ),
-        ShortDevice(
-          id: '2',
-          name: 'Ender 3 Pro',
-          deviceType: DeviceType(
-              id: 'printer', displayName: '3D Printer', systemName: ''),
-          brand: Brand(id: 'creality', name: 'Creality'),
-          attributes: [],
-          imagePath: 'assets/images/Foto.png',
-        ),
-      ];
-    });
   }
 
   @override
@@ -89,8 +68,18 @@ class _DevicesPageState extends State<DevicesPage> {
             if (index == _devices.length) {
               return AddDeviceCard(
                 onTap: () async {
-                  final result = await context.push('/device-form');
-                  if (result == true) loadMockDevices();
+                  final modalManager = context.read<ModalManager>();
+                  final resultCompleter = Completer<bool>();
+                  modalManager.show(
+                    ModalType.deviceForm,
+                    data: {
+                      'device': null,
+                      'completer': resultCompleter,
+                    },
+                  );
+
+                  final result = await resultCompleter.future;
+                  if (result == true) fetchMyDevices();
                 },
               );
             }
@@ -99,9 +88,18 @@ class _DevicesPageState extends State<DevicesPage> {
             return DeviceCard(
               device: device,
               onTap: () async {
-                final result =
-                    await context.push('/device-form', extra: device);
-                if (result == true) loadMockDevices();
+                final modalManager = context.read<ModalManager>();
+                final resultCompleter = Completer<bool>();
+                modalManager.show(
+                  ModalType.deviceForm,
+                  data: {
+                    'device': device,
+                    'completer': resultCompleter,
+                  },
+                );
+
+                final result = await resultCompleter.future;
+                if (result == true) fetchMyDevices();
               },
             );
           },

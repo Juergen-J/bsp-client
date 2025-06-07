@@ -18,6 +18,10 @@ ShortDevice _$ShortDeviceFromJson(Map<String, dynamic> json) => ShortDevice(
               .toList() ??
           const [],
       imagePath: json['imagePath'] as String?,
+      attachments: (json['attachments'] as List<dynamic>?)
+              ?.map((e) => Attachment.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$ShortDeviceToJson(ShortDevice instance) =>
@@ -29,4 +33,5 @@ Map<String, dynamic> _$ShortDeviceToJson(ShortDevice instance) =>
       'name': instance.name,
       'attributes': instance.attributes,
       'imagePath': instance.imagePath,
+      'attachments': instance.attachments,
     };

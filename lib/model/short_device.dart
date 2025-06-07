@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/model/attachment.dart';
 import 'package:berlin_service_portal/model/brand.dart';
 import 'package:berlin_service_portal/model/device_type.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -22,6 +23,8 @@ class ShortDevice {
 
   final String? imagePath;
 
+  final List<Attachment> attachments;
+
   ShortDevice({
     required this.id,
     required this.deviceType,
@@ -30,6 +33,7 @@ class ShortDevice {
     required this.name,
     this.attributes = const [],
     this.imagePath,
+    this.attachments = const [],
   });
 
   factory ShortDevice.fromJson(Map<String, dynamic> json) =>

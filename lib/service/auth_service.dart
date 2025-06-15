@@ -3,7 +3,6 @@ import 'package:berlin_service_portal/model/user_info.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';
 
 import '../model/login_response.dart';
@@ -11,7 +10,7 @@ import '../page/modal/modal_service.dart';
 import '../page/modal/modal_type.dart';
 
 class AuthService extends ChangeNotifier {
-  final String _host = FlavorConfig.instance.variables['beHost'];
+  final String _host;
   final Dio _dio = Dio();
 
   String? _accessToken;
@@ -30,7 +29,10 @@ class AuthService extends ChangeNotifier {
 
   Dio get dio => _dio;
 
-  AuthService() {
+  String get host => _host;
+
+  AuthService(this._host) {
+    _dio.options.baseUrl = "http://$_host";
     _dio.interceptors.add(AuthInterceptor(this));
     _init();
   }
@@ -388,10 +390,46 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
-      authService._refreshTokenCall();
+  Future<void> onError(
+      DioException err, ErrorInterceptorHandler handler) async {
+    final requestOptions = err.requestOptions;
+
+    if (err.response?.statusCode == 401 &&
+        authService.isLoggedIn &&
+        !requestOptions.extra.containsKey('retry')) {
+      try {
+        await authService._refreshTokenCall();
+
+        final newToken = authService.accessToken;
+        if (newToken != null) {
+          final newRequest = await _retryWithNewToken(requestOptions, newToken);
+          return handler.resolve(newRequest);
+        }
+      } catch (_) {
+        await authService.logout();
+      }
     }
-    super.onError(err, handler);
+
+    return super.onError(err, handler);
+  }
+
+  Future<Response<dynamic>> _retryWithNewToken(
+      RequestOptions requestOptions, String newToken) {
+    final newOptions = Options(
+      method: requestOptions.method,
+      headers: Map<String, dynamic>.from(requestOptions.headers)
+        ..['Authorization'] = 'Bearer $newToken',
+      responseType: requestOptions.responseType,
+      contentType: requestOptions.contentType,
+      extra: {...requestOptions.extra, 'retry': true},
+    );
+
+    final dio = Dio();
+    return dio.request<dynamic>(
+      requestOptions.path,
+      data: requestOptions.data,
+      queryParameters: requestOptions.queryParameters,
+      options: newOptions,
+    );
   }
 }

@@ -57,6 +57,7 @@ class ModalOverlay extends StatelessWidget {
           },
           isMobile: isMobile,
           editedDevice: data?['device'] as ShortDevice?,
+          readonly: data?['readonly'] == true,
           onFinish: (bool success) {
             modalManager.close();
             final completer = data?['completer'] as Completer?;

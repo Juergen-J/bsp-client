@@ -74,6 +74,7 @@ class _DevicesPageState extends State<DevicesPage> {
                     ModalType.deviceForm,
                     data: {
                       'device': null,
+                      'readonly': false,
                       'completer': resultCompleter,
                     },
                   );
@@ -94,6 +95,7 @@ class _DevicesPageState extends State<DevicesPage> {
                   ModalType.deviceForm,
                   data: {
                     'device': device,
+                    'readonly': true,
                     'completer': resultCompleter,
                   },
                 );

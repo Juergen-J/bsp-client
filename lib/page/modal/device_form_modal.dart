@@ -14,14 +14,15 @@ class DeviceFormModal extends StatefulWidget {
   final bool isMobile;
   final ShortDevice? editedDevice;
   final void Function(bool success)? onFinish;
+  final bool readonly;
 
-  const DeviceFormModal({
-    super.key,
-    required this.onClose,
-    required this.isMobile,
-    this.editedDevice,
-    this.onFinish,
-  });
+  const DeviceFormModal(
+      {super.key,
+      required this.onClose,
+      required this.isMobile,
+      this.editedDevice,
+      this.onFinish,
+      this.readonly = false});
 
   @override
   State<DeviceFormModal> createState() => _DeviceFormModalState();
@@ -165,18 +166,20 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
                       DropdownMenuItem(value: dt, child: Text(dt.displayName)))
                   .toList(),
               value: selectedDeviceType,
-              onChanged: (newValue) {
-                setState(() {
-                  selectedDeviceType = newValue;
-                  selectedBrand = null;
-                  selectedModel = null;
-                  brandList.clear();
-                  deviceList.clear();
-                  deviceName = '';
-                  parameters.clear();
-                });
-                if (newValue != null) fetchBrands(newValue.id);
-              },
+              onChanged: widget.readonly
+                  ? null
+                  : (newValue) {
+                      setState(() {
+                        selectedDeviceType = newValue;
+                        selectedBrand = null;
+                        selectedModel = null;
+                        brandList.clear();
+                        deviceList.clear();
+                        deviceName = '';
+                        parameters.clear();
+                      });
+                      if (newValue != null) fetchBrands(newValue.id);
+                    },
             ),
             const SizedBox(height: 16),
             if (selectedDeviceType != null)
@@ -186,17 +189,20 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
                     .map((b) => DropdownMenuItem(value: b, child: Text(b.name)))
                     .toList(),
                 value: selectedBrand,
-                onChanged: (newValue) {
-                  setState(() {
-                    selectedBrand = newValue;
-                    selectedModel = null;
-                    deviceList.clear();
-                    deviceName = newValue?.name ?? '';
-                    parameters.clear();
-                  });
-                  if (newValue != null)
-                    fetchDevicesByBrand(selectedDeviceType!.id, newValue.id);
-                },
+                onChanged: widget.readonly
+                    ? null
+                    : (newValue) {
+                        setState(() {
+                          selectedBrand = newValue;
+                          selectedModel = null;
+                          deviceList.clear();
+                          deviceName = newValue?.name ?? '';
+                          parameters.clear();
+                        });
+                        if (newValue != null)
+                          fetchDevicesByBrand(
+                              selectedDeviceType!.id, newValue.id);
+                      },
               ),
             const SizedBox(height: 16),
             if (selectedBrand != null && deviceList.isNotEmpty)
@@ -206,20 +212,23 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
                     .map((d) => DropdownMenuItem(value: d, child: Text(d.name)))
                     .toList(),
                 value: selectedModel,
-                onChanged: (newValue) {
-                  setState(() {
-                    selectedModel = newValue;
-                    if (newValue != null) {
-                      deviceName = '${selectedBrand!.name} ${newValue.name}';
-                      parameters = newValue.attributes
-                          .map((a) => MapEntry(a.propertyName, a.value))
-                          .toList();
-                    } else {
-                      deviceName = selectedBrand?.name ?? '';
-                      parameters.clear();
-                    }
-                  });
-                },
+                onChanged: widget.readonly
+                    ? null
+                    : (newValue) {
+                        setState(() {
+                          selectedModel = newValue;
+                          if (newValue != null) {
+                            deviceName =
+                                '${selectedBrand!.name} ${newValue.name}';
+                            parameters = newValue.attributes
+                                .map((a) => MapEntry(a.propertyName, a.value))
+                                .toList();
+                          } else {
+                            deviceName = selectedBrand?.name ?? '';
+                            parameters.clear();
+                          }
+                        });
+                      },
               ),
             const SizedBox(height: 16),
             const Text("Technische Daten",

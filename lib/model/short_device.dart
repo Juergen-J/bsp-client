@@ -1,9 +1,8 @@
-import 'package:berlin_service_portal/model/attachment.dart';
+import 'package:berlin_service_portal/model/attachment/attachment_dto.dart';
 import 'package:berlin_service_portal/model/brand.dart';
 import 'package:berlin_service_portal/model/device_type.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'attribute_present.dart';
-import 'element_status.dart';
 
 part 'short_device.g.dart';
 
@@ -21,9 +20,7 @@ class ShortDevice {
 
   final List<AttributePresent> attributes;
 
-  final String? imagePath;
-
-  final List<Attachment> attachments;
+  final List<AttachmentDto> attachments;
 
   ShortDevice({
     required this.id,
@@ -32,7 +29,6 @@ class ShortDevice {
     this.skuCode,
     required this.name,
     this.attributes = const [],
-    this.imagePath,
     this.attachments = const [],
   });
 

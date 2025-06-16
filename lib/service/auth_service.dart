@@ -21,6 +21,8 @@ class AuthService extends ChangeNotifier {
 
   UserInfo? _userInfo;
 
+  bool _isRefreshing = false;
+
   String? get accessToken => _accessToken;
 
   bool get isLoggedIn => _accessToken != null && _refreshToken != null;
@@ -64,8 +66,23 @@ class AuthService extends ChangeNotifier {
         _refreshTokenExpiry = DateTime.tryParse(storedRefreshTokenExpiry);
       }
 
-      // _decodeUserInfoFromToken(_accessToken!);
-      fetchUserInfoFromApi();
+      if (_refreshTokenExpiry != null &&
+          DateTime.now().isAfter(_refreshTokenExpiry!)) {
+        if (kDebugMode) {
+          print('Refresh token expired, logging out');
+        }
+        await logout();
+        return;
+      }
+
+      try {
+        await fetchUserInfoFromApi();
+      } catch (e) {
+        if (kDebugMode) {
+          print('Failed to fetch user info on init: $e');
+        }
+        await logout();
+      }
       notifyListeners();
     }
   }
@@ -113,10 +130,8 @@ class AuthService extends ChangeNotifier {
       _refreshTokenExpiry =
           DateTime.now().add(Duration(seconds: refreshExpiresIn));
 
-      // _decodeUserInfoFromToken(_accessToken!);
-
       _saveTokensToStorage();
-      fetchUserInfoFromApi();
+      await fetchUserInfoFromApi();
       notifyListeners();
       return '';
     } on DioException catch (e) {
@@ -127,7 +142,6 @@ class AuthService extends ChangeNotifier {
           return 'incorrect_password';
         }
       }
-
       return '';
     }
   }
@@ -268,21 +282,39 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> _refreshTokenCall() async {
+  Future<bool> refreshTokenCall() async {
+    if (_isRefreshing) {
+      while (_isRefreshing) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      return _accessToken != null;
+    }
+
+    _isRefreshing = true;
+
     try {
-      final response = await _dio.post(
-        'http://localhost:8090/v1/user/refresh-token',
-        data: _refreshToken,
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        ),
+      if (_refreshTokenExpiry != null &&
+          DateTime.now().isAfter(_refreshTokenExpiry!)) {
+        if (kDebugMode) {
+          print('Refresh token expired, logging out');
+        }
+        await logout();
+        return false;
+      }
+
+      final rawDio = Dio();
+      rawDio.options.baseUrl = _dio.options.baseUrl;
+
+      final response = await rawDio.post(
+        '/v1/user/refresh-token',
+        data:  _refreshToken,
+        options: Options(headers: {"Content-Type": "text/plain"}),
       );
 
       final data = response.data;
       _accessToken = data['access_token'];
       _refreshToken = data['refresh_token'];
+      _idToken ??= data['id_token'];
 
       final expiresIn = data['expires_in'];
       final refreshExpiresIn = data['refresh_expires_in'];
@@ -293,10 +325,14 @@ class AuthService extends ChangeNotifier {
 
       _saveTokensToStorage();
       notifyListeners();
+      return true;
     } on DioException catch (e) {
       print(
           'Refresh token error: ${e.response?.statusCode} - ${e.response?.data}');
       await logout();
+      return false;
+    } finally {
+      _isRefreshing = false;
     }
   }
 
@@ -308,7 +344,7 @@ class AuthService extends ChangeNotifier {
         now.isAfter(
             _accessTokenExpiry!.subtract(const Duration(seconds: 30)))) {
       if (_refreshTokenExpiry != null && now.isBefore(_refreshTokenExpiry!)) {
-        await _refreshTokenCall();
+        await refreshTokenCall();
       } else {
         await logout();
       }
@@ -321,17 +357,24 @@ class AuthService extends ChangeNotifier {
 
   /// Logout
   Future<void> logout() async {
+    if (_idToken != null) {
+      await logoutFromApi();
+    }
+
     _accessToken = null;
     _refreshToken = null;
+    _idToken = null;
     _accessTokenExpiry = null;
     _refreshTokenExpiry = null;
+    _userInfo = null;
+    _isRefreshing = false;
 
     html.window.localStorage.remove('access_token');
     html.window.localStorage.remove('refresh_token');
+    html.window.localStorage.remove('id_token');
     html.window.localStorage.remove('access_token_expiry');
     html.window.localStorage.remove('refresh_token_expiry');
 
-    await logoutFromApi();
     notifyListeners();
   }
 
@@ -342,7 +385,6 @@ class AuthService extends ChangeNotifier {
         data: _idToken,
         options: Options(headers: {"Content-Type": "text/plain"}),
       );
-      notifyListeners();
     } on DioException catch (e) {
       print('Logout error: ${e.response?.statusCode} - ${e.response?.data}');
     }
@@ -397,16 +439,21 @@ class AuthInterceptor extends Interceptor {
     if (err.response?.statusCode == 401 &&
         authService.isLoggedIn &&
         !requestOptions.extra.containsKey('retry')) {
-      try {
-        await authService._refreshTokenCall();
+      final refreshSuccess = await authService.refreshTokenCall();
 
+      if (refreshSuccess) {
         final newToken = authService.accessToken;
         if (newToken != null) {
-          final newRequest = await _retryWithNewToken(requestOptions, newToken);
-          return handler.resolve(newRequest);
+          try {
+            final newRequest =
+                await _retryWithNewToken(requestOptions, newToken);
+            return handler.resolve(newRequest);
+          } catch (retryError) {
+            if (kDebugMode) {
+              print('Retry request failed: $retryError');
+            }
+          }
         }
-      } catch (_) {
-        await authService.logout();
       }
     }
 
@@ -425,6 +472,10 @@ class AuthInterceptor extends Interceptor {
     );
 
     final dio = Dio();
+    dio.options.baseUrl = authService.host.startsWith('http')
+        ? authService.host
+        : "http://${authService.host}";
+
     return dio.request<dynamic>(
       requestOptions.path,
       data: requestOptions.data,

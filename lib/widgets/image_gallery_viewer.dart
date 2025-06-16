@@ -4,7 +4,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:provider/provider.dart';
 
-import 'image_service.dart';
+import '../service/image_service.dart';
 
 class _ImageGalleryViewer extends StatefulWidget {
   final List<String> imageIds;
@@ -64,7 +64,7 @@ class _ImageGalleryViewerState extends State<_ImageGalleryViewer> {
               backgroundDecoration: const BoxDecoration(color: Colors.black),
               builder: (context, index) => PhotoViewGalleryPageOptions(
                 imageProvider: images[index],
-                minScale: PhotoViewComputedScale.contained * 1,
+                minScale: PhotoViewComputedScale.contained * 0.75,
                 maxScale: PhotoViewComputedScale.covered * 2.5,
               ),
               loadingBuilder: (_, __) =>

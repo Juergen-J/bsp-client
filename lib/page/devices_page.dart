@@ -33,8 +33,7 @@ class _DevicesPageState extends State<DevicesPage> {
 
   Future<void> fetchMyDevices() async {
     final Dio dio = Provider.of<AuthService>(context, listen: false).dio;
-    final String _host = FlavorConfig.instance.variables['beHost'];
-    final response = await dio.get('http://$_host/v1/device/my');
+    final response = await dio.get('/v1/device/my');
 
     if (response.statusCode == 200 && response.data['content'] != null) {
       setState(() {

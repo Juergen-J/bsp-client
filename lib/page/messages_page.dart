@@ -18,7 +18,7 @@ class MessagesPage extends StatefulWidget {
 
 class MessagesPageState extends State<MessagesPage> {
   BuildContext? _listViewContext;
-  late StompClient _stompClient;
+  late StompClient? _stompClient;
   final ScrollController _scrollControllerMessage = ScrollController();
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
@@ -99,7 +99,7 @@ class MessagesPageState extends State<MessagesPage> {
 
   @override
   void dispose() {
-    _stompClient.deactivate();
+    _stompClient?.deactivate();
     _controller.dispose();
     _searchController.dispose();
     _scrollControllerMessage.removeListener(_scrollMessageListener);

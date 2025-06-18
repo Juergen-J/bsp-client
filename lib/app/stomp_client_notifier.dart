@@ -31,7 +31,7 @@ class StompClientNotifier extends ChangeNotifier {
       throw Exception("No token found (user not logged in?)");
     }
 
-    if (_stompClient == null) {
+    if (_stompClient == null || !_stompClient!.isActive) {
       _stompClient = StompClient(
         config: StompConfig(
           url: 'ws://$_host/chat',

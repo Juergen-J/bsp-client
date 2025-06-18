@@ -39,7 +39,7 @@ void main() async {
         final stomp = stompNotifier ?? StompClientNotifier(authService);
 
         authService.onLogoutCallback = () {
-          stomp.dispose();
+          stomp.stompClient?.deactivate();
         };
 
         return stomp;

@@ -3,7 +3,6 @@ import 'package:berlin_service_portal/model/user_info.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';
 
 import '../model/login_response.dart';
@@ -11,7 +10,7 @@ import '../page/modal/modal_service.dart';
 import '../page/modal/modal_type.dart';
 
 class AuthService extends ChangeNotifier {
-  final String _host = FlavorConfig.instance.variables['beHost'];
+  final String _host;
   final Dio _dio = Dio();
 
   String? _accessToken;
@@ -22,6 +21,8 @@ class AuthService extends ChangeNotifier {
 
   UserInfo? _userInfo;
 
+  bool _isRefreshing = false;
+
   String? get accessToken => _accessToken;
 
   bool get isLoggedIn => _accessToken != null && _refreshToken != null;
@@ -30,7 +31,10 @@ class AuthService extends ChangeNotifier {
 
   Dio get dio => _dio;
 
-  AuthService() {
+  String get host => _host;
+
+  AuthService(this._host) {
+    _dio.options.baseUrl = "http://$_host";
     _dio.interceptors.add(AuthInterceptor(this));
     _init();
   }
@@ -62,8 +66,23 @@ class AuthService extends ChangeNotifier {
         _refreshTokenExpiry = DateTime.tryParse(storedRefreshTokenExpiry);
       }
 
-      // _decodeUserInfoFromToken(_accessToken!);
-      fetchUserInfoFromApi();
+      if (_refreshTokenExpiry != null &&
+          DateTime.now().isAfter(_refreshTokenExpiry!)) {
+        if (kDebugMode) {
+          print('Refresh token expired, logging out');
+        }
+        await logout();
+        return;
+      }
+
+      try {
+        await fetchUserInfoFromApi();
+      } catch (e) {
+        if (kDebugMode) {
+          print('Failed to fetch user info on init: $e');
+        }
+        await logout();
+      }
       notifyListeners();
     }
   }
@@ -111,10 +130,8 @@ class AuthService extends ChangeNotifier {
       _refreshTokenExpiry =
           DateTime.now().add(Duration(seconds: refreshExpiresIn));
 
-      // _decodeUserInfoFromToken(_accessToken!);
-
       _saveTokensToStorage();
-      fetchUserInfoFromApi();
+      await fetchUserInfoFromApi();
       notifyListeners();
       return '';
     } on DioException catch (e) {
@@ -125,7 +142,6 @@ class AuthService extends ChangeNotifier {
           return 'incorrect_password';
         }
       }
-
       return '';
     }
   }
@@ -266,21 +282,39 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> _refreshTokenCall() async {
+  Future<bool> refreshTokenCall() async {
+    if (_isRefreshing) {
+      while (_isRefreshing) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      return _accessToken != null;
+    }
+
+    _isRefreshing = true;
+
     try {
-      final response = await _dio.post(
-        'http://localhost:8090/v1/user/refresh-token',
-        data: _refreshToken,
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        ),
+      if (_refreshTokenExpiry != null &&
+          DateTime.now().isAfter(_refreshTokenExpiry!)) {
+        if (kDebugMode) {
+          print('Refresh token expired, logging out');
+        }
+        await logout();
+        return false;
+      }
+
+      final rawDio = Dio();
+      rawDio.options.baseUrl = _dio.options.baseUrl;
+
+      final response = await rawDio.post(
+        '/v1/user/refresh-token',
+        data:  _refreshToken,
+        options: Options(headers: {"Content-Type": "text/plain"}),
       );
 
       final data = response.data;
       _accessToken = data['access_token'];
       _refreshToken = data['refresh_token'];
+      _idToken ??= data['id_token'];
 
       final expiresIn = data['expires_in'];
       final refreshExpiresIn = data['refresh_expires_in'];
@@ -291,10 +325,14 @@ class AuthService extends ChangeNotifier {
 
       _saveTokensToStorage();
       notifyListeners();
+      return true;
     } on DioException catch (e) {
       print(
           'Refresh token error: ${e.response?.statusCode} - ${e.response?.data}');
       await logout();
+      return false;
+    } finally {
+      _isRefreshing = false;
     }
   }
 
@@ -306,7 +344,7 @@ class AuthService extends ChangeNotifier {
         now.isAfter(
             _accessTokenExpiry!.subtract(const Duration(seconds: 30)))) {
       if (_refreshTokenExpiry != null && now.isBefore(_refreshTokenExpiry!)) {
-        await _refreshTokenCall();
+        await refreshTokenCall();
       } else {
         await logout();
       }
@@ -319,17 +357,24 @@ class AuthService extends ChangeNotifier {
 
   /// Logout
   Future<void> logout() async {
+    if (_idToken != null) {
+      await logoutFromApi();
+    }
+
     _accessToken = null;
     _refreshToken = null;
+    _idToken = null;
     _accessTokenExpiry = null;
     _refreshTokenExpiry = null;
+    _userInfo = null;
+    _isRefreshing = false;
 
     html.window.localStorage.remove('access_token');
     html.window.localStorage.remove('refresh_token');
+    html.window.localStorage.remove('id_token');
     html.window.localStorage.remove('access_token_expiry');
     html.window.localStorage.remove('refresh_token_expiry');
 
-    await logoutFromApi();
     notifyListeners();
   }
 
@@ -340,7 +385,6 @@ class AuthService extends ChangeNotifier {
         data: _idToken,
         options: Options(headers: {"Content-Type": "text/plain"}),
       );
-      notifyListeners();
     } on DioException catch (e) {
       print('Logout error: ${e.response?.statusCode} - ${e.response?.data}');
     }
@@ -388,10 +432,55 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
-      authService._refreshTokenCall();
+  Future<void> onError(
+      DioException err, ErrorInterceptorHandler handler) async {
+    final requestOptions = err.requestOptions;
+
+    if (err.response?.statusCode == 401 &&
+        authService.isLoggedIn &&
+        !requestOptions.extra.containsKey('retry')) {
+      final refreshSuccess = await authService.refreshTokenCall();
+
+      if (refreshSuccess) {
+        final newToken = authService.accessToken;
+        if (newToken != null) {
+          try {
+            final newRequest =
+                await _retryWithNewToken(requestOptions, newToken);
+            return handler.resolve(newRequest);
+          } catch (retryError) {
+            if (kDebugMode) {
+              print('Retry request failed: $retryError');
+            }
+          }
+        }
+      }
     }
-    super.onError(err, handler);
+
+    return super.onError(err, handler);
+  }
+
+  Future<Response<dynamic>> _retryWithNewToken(
+      RequestOptions requestOptions, String newToken) {
+    final newOptions = Options(
+      method: requestOptions.method,
+      headers: Map<String, dynamic>.from(requestOptions.headers)
+        ..['Authorization'] = 'Bearer $newToken',
+      responseType: requestOptions.responseType,
+      contentType: requestOptions.contentType,
+      extra: {...requestOptions.extra, 'retry': true},
+    );
+
+    final dio = Dio();
+    dio.options.baseUrl = authService.host.startsWith('http')
+        ? authService.host
+        : "http://${authService.host}";
+
+    return dio.request<dynamic>(
+      requestOptions.path,
+      data: requestOptions.data,
+      queryParameters: requestOptions.queryParameters,
+      options: newOptions,
+    );
   }
 }

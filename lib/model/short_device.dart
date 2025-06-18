@@ -1,8 +1,8 @@
+import 'package:berlin_service_portal/model/attachment/attachment_dto.dart';
 import 'package:berlin_service_portal/model/brand.dart';
 import 'package:berlin_service_portal/model/device_type.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'attribute_present.dart';
-import 'element_status.dart';
 
 part 'short_device.g.dart';
 
@@ -20,13 +20,17 @@ class ShortDevice {
 
   final List<AttributePresent> attributes;
 
-  ShortDevice(
-      {required this.id,
-      required this.deviceType,
-      required this.brand,
-      this.skuCode,
-      required this.name,
-      this.attributes = const []});
+  final List<AttachmentDto> attachments;
+
+  ShortDevice({
+    required this.id,
+    required this.deviceType,
+    required this.brand,
+    this.skuCode,
+    required this.name,
+    this.attributes = const [],
+    this.attachments = const [],
+  });
 
   factory ShortDevice.fromJson(Map<String, dynamic> json) =>
       _$ShortDeviceFromJson(json);

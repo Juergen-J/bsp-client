@@ -17,6 +17,10 @@ ShortDevice _$ShortDeviceFromJson(Map<String, dynamic> json) => ShortDevice(
               ?.map((e) => AttributePresent.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      attachments: (json['attachments'] as List<dynamic>?)
+              ?.map((e) => AttachmentDto.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$ShortDeviceToJson(ShortDevice instance) =>
@@ -27,4 +31,5 @@ Map<String, dynamic> _$ShortDeviceToJson(ShortDevice instance) =>
       'skuCode': instance.skuCode,
       'name': instance.name,
       'attributes': instance.attributes,
+      'attachments': instance.attachments,
     };

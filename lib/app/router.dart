@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../model/short_device.dart';
 import '../page/component/app_bar_component.dart';
 import '../page/component/footer_component.dart';
 import '../page/component/sticky_menu_delegate.dart';
 import '../page/component/top_navigation_menu.dart';
-import '../page/device_form_page.dart';
 import '../page/devices_page.dart';
 import '../page/home_page.dart';
 import '../page/messages_page.dart';
@@ -26,14 +24,6 @@ final GlobalKey _languageKey = GlobalKey();
 final GoRouter router = GoRouter(
   initialLocation: '/home',
   routes: [
-    GoRoute(
-      path: '/device-form',
-      name: 'device_form',
-      builder: (context, state) {
-        final ShortDevice? device = state.extra as ShortDevice?;
-        return DeviceFormPage(editedDevice: device);
-      },
-    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         var colorScheme = Theme.of(context).colorScheme;
@@ -224,7 +214,6 @@ List<Widget> buildStickyMessages(
   ];
 }
 
-
 /// Desktop version (wide screen)
 Widget buildDesktopScaffold(
     BuildContext context,
@@ -260,7 +249,6 @@ Widget buildDesktopScaffold(
               ),
             ),
           ),
-
         SliverFillRemaining(
           hasScrollBody: false,
           child: Column(
@@ -273,7 +261,6 @@ Widget buildDesktopScaffold(
                   ),
                 ),
               ),
-
               FooterComponent(
                 contentWidth: contentWidth,
                 height: kFooterHeight,
@@ -359,4 +346,3 @@ int? _getSelectedIndex(BuildContext context) {
       return null;
   }
 }
-

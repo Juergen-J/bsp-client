@@ -28,6 +28,17 @@ class MessagesPageState extends State<MessagesPage> {
   late final Future<bool> _loginCheckFuture;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    stompProvider = Provider.of<StompClientNotifier>(context, listen: false);
+
+    if (stompProvider.stompClient == null || !stompProvider.isConnected) {
+      stompProvider.connectStompClient();
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     _loginCheckFuture = requireLoginIfNeeded(context);

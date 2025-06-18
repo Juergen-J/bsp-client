@@ -14,6 +14,9 @@ class StompClientNotifier extends ChangeNotifier {
   String report = '';
   String message = '';
   String? userId;
+  bool get isConnected => _stompClient?.connected ?? false;
+  StompClient? get stompClient => _stompClient;
+
 
   StompClientNotifier(this._authService);
 
@@ -96,6 +99,7 @@ class StompClientNotifier extends ChangeNotifier {
   @override
   void dispose() {
     _stompClient?.deactivate();
+    _stompClient = null;
     super.dispose();
   }
 

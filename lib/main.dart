@@ -36,10 +36,13 @@ void main() async {
         return StompClientNotifier(authService);
       },
       update: (_, authService, stompNotifier) {
-        return stompNotifier ??
-            StompClientNotifier(
-              authService,
-            );
+        final stomp = stompNotifier ?? StompClientNotifier(authService);
+
+        authService.onLogoutCallback = () {
+          stomp.dispose();
+        };
+
+        return stomp;
       },
     ),
     ChangeNotifierProxyProvider<AuthService, MessagesProvider>(

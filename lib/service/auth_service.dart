@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
+import '../app/stomp_client_notifier.dart';
 import '../model/login_response.dart';
 import '../page/modal/modal_service.dart';
 import '../page/modal/modal_type.dart';
@@ -42,6 +43,8 @@ class AuthService extends ChangeNotifier {
   Future<void> _init() async {
     await _loadTokensFromStorage();
   }
+
+  void Function()? onLogoutCallback;
 
   Future<void> _loadTokensFromStorage() async {
     final storedAccessToken = html.window.localStorage['access_token'];
@@ -360,6 +363,9 @@ class AuthService extends ChangeNotifier {
     if (_idToken != null) {
       await logoutFromApi();
     }
+
+    onLogoutCallback?.call();
+
 
     _accessToken = null;
     _refreshToken = null;

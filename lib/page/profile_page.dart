@@ -43,14 +43,13 @@ class _ProfilePageState extends State<ProfilePage> {
     final authService = Provider.of<AuthService>(context, listen: false);
 
     setState(() => _isLoading = true);
-
     if (authService.isLoggedIn) {
       try {
         await authService.ensureTokenIsFresh();
-
         await authService.fetchUserInfoFromApi();
 
         final userInfo = authService.getUserInfo();
+
         if (userInfo != null) {
           setState(() {
             _userInfo = userInfo;

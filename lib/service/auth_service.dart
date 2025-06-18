@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:html' as html;
 import 'package:berlin_service_portal/model/user_info.dart';
 import 'package:dio/dio.dart';
@@ -23,6 +24,7 @@ class AuthService extends ChangeNotifier {
   UserInfo? _userInfo;
 
   String? get accessToken => _accessToken;
+  String? get refreshToken => _refreshToken;
 
   bool get isLoggedIn => _accessToken != null && _refreshToken != null;
 
@@ -268,7 +270,9 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _refreshTokenCall() async {
     try {
-      final response = await _dio.post(
+      print('Attempt _refreshTokenCall');
+      final dioWithoutInterceptor = Dio();
+      final response = await dioWithoutInterceptor.post(
         'http://localhost:8090/v1/user/refresh-token',
         data: _refreshToken,
         options: Options(
@@ -277,31 +281,38 @@ class AuthService extends ChangeNotifier {
           },
         ),
       );
+      print('🔁 raw refresh-token response: ${response.data}');
+      final data = response.data is String
+          ? jsonDecode(response.data)
+          : response.data;
 
-      final data = response.data;
       _accessToken = data['access_token'];
       _refreshToken = data['refresh_token'];
 
       final expiresIn = data['expires_in'];
       final refreshExpiresIn = data['refresh_expires_in'];
 
+      print('expires_in: $expiresIn');
+      print('refresh_expires_in: $refreshExpiresIn');
+
       _accessTokenExpiry = DateTime.now().add(Duration(seconds: expiresIn));
       _refreshTokenExpiry =
           DateTime.now().add(Duration(seconds: refreshExpiresIn));
-
+      print('New _accessTokenExpiry: $_accessTokenExpiry');
       _saveTokensToStorage();
       notifyListeners();
     } on DioException catch (e) {
       print(
           'Refresh token error: ${e.response?.statusCode} - ${e.response?.data}');
       await logout();
+    } catch (e) {
+      print('⚠️ Unexpected error: $e');
     }
   }
 
   Future<void> refreshTokenIfNeeded() async {
     if (!isLoggedIn) return;
     final now = DateTime.now();
-
     if (_accessTokenExpiry == null ||
         now.isAfter(
             _accessTokenExpiry!.subtract(const Duration(seconds: 30)))) {
@@ -376,22 +387,54 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(this.authService);
 
   @override
-  void onRequest(
-      RequestOptions options, RequestInterceptorHandler handler) async {
-    await authService.ensureTokenIsFresh();
+  void onRequest(RequestOptions options,
+      RequestInterceptorHandler handler) async {
+    try {
+      await authService.ensureTokenIsFresh();
+    } catch (e, stack) {
+      debugPrint('💥 Error in ensureTokenIsFresh: $e');
+      debugPrint('📦 Stack: $stack');
+      return handler.reject(
+        DioException(
+          requestOptions: options,
+          error: e,
+          message: 'ensureTokenIsFresh failed',
+          type: DioExceptionType.unknown,
+        ),
+      );
+    }
 
     final token = authService.accessToken;
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
     }
-    super.onRequest(options, handler);
+
+    return handler.next(options);
   }
 
+
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    if (err.response?.statusCode == 401) {
-      authService._refreshTokenCall();
+  Future<void> onError(DioException err,
+      ErrorInterceptorHandler handler) async {
+    final requestOptions = err.requestOptions;
+    debugPrint('onError: $err');
+    debugPrint('onError response: ${err.response}');
+    debugPrint('onError response code: ${err.response?.statusCode}');
+    debugPrint('onError response token: ${authService.refreshToken}');
+    if (err.response?.statusCode == 401 && authService.refreshToken != null) {
+      try {
+        await authService._refreshTokenCall();
+
+        final newRequestOptions = requestOptions
+          ..headers['Authorization'] = 'Bearer ${authService.accessToken}';
+
+        final response = await authService.dio.fetch(newRequestOptions);
+        return handler.resolve(response);
+      } catch (e) {
+        return handler.next(err);
+      }
     }
-    super.onError(err, handler);
+
+    return handler.next(err);
   }
 }

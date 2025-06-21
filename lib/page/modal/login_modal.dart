@@ -27,6 +27,7 @@ class _LoginModalState extends State<LoginModal> {
 
   bool _obscurePassword = true;
   bool _incorrectCredentials = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -37,13 +38,19 @@ class _LoginModalState extends State<LoginModal> {
   }
 
   void _submit() async {
-    setState(() => _incorrectCredentials = false);
+    setState(() {
+      _incorrectCredentials = false;
+      _isLoading = true;
+    });
     if (_formKey.currentState!.validate()) {
       final auth = context.read<AuthService>();
       final error = await auth.login(
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
+      setState(() {
+        _isLoading = false;
+      });
       if (error.isEmpty) {
         final redirectService = context.read<AuthRedirectService>();
         final router = GoRouter.of(context);
@@ -64,6 +71,10 @@ class _LoginModalState extends State<LoginModal> {
       } else {
         setState(() => _incorrectCredentials = true);
       }
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -165,8 +176,17 @@ class _LoginModalState extends State<LoginModal> {
                     borderRadius: BorderRadius.circular(32),
                   ),
                 ),
-                onPressed: _submit,
-                child: const Text(
+                onPressed: _isLoading ? null : _submit,
+                child: _isLoading
+                    ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+                    : const Text(
                   'Einloggen',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),

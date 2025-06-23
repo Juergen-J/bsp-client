@@ -34,17 +34,21 @@ class AuthService extends ChangeNotifier {
 
   String get host => _host;
 
+  bool _isInitialized = false;
+
   AuthService(this._host) {
     _dio.options.baseUrl = "http://$_host";
     _dio.interceptors.add(AuthInterceptor(this));
-    _init();
   }
 
-  Future<void> _init() async {
+  Future<void> init() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
     await _loadTokensFromStorage();
   }
 
   void Function()? onLogoutCallback;
+  void Function()? onLoginCallback;
 
   Future<void> _loadTokensFromStorage() async {
     final storedAccessToken = html.window.localStorage['access_token'];
@@ -136,6 +140,7 @@ class AuthService extends ChangeNotifier {
       _saveTokensToStorage();
       await fetchUserInfoFromApi();
       notifyListeners();
+      onLoginCallback?.call();
       return '';
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {

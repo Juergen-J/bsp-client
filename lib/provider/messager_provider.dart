@@ -3,7 +3,9 @@ import 'package:dio/dio.dart';
 import '../service/auth_service.dart';
 
 class MessagesProvider extends ChangeNotifier {
-  AuthService _authService;
+  final AuthService _authService;
+
+  MessagesProvider(this._authService);
 
   Dio get _dio => _authService.dio;
 
@@ -19,15 +21,19 @@ class MessagesProvider extends ChangeNotifier {
   String? _selectedChatId;
   String? get selectedChatId => _selectedChatId;
 
-  MessagesProvider(this._authService);
-
   bool get isLoggedIn => _authService.isLoggedIn;
+
+  bool _isLoadingMessages = false;
+  bool _hasMoreMessages = true;
+  bool get hasMoreMessages => _hasMoreMessages;
+  bool get isLoadingMessages => _isLoadingMessages;
 
   void clear() {
     _conversations.clear();
     _messages.clear();
     _selectedChatId = null;
     _messagePage = 0;
+    _isLoadingMessages = false;
     notifyListeners();
   }
 
@@ -62,26 +68,36 @@ class MessagesProvider extends ChangeNotifier {
   }
 
   Future<void> fetchMessages() async {
-    if (!isLoggedIn || _selectedChatId == null) return;
+    if (!isLoggedIn || _selectedChatId == null || _isLoadingMessages || !_hasMoreMessages) return;
+
+    _isLoadingMessages = true;
+
     try {
       final response = await _dio.get(
-          'http://localhost:8090/v1/chat/$_selectedChatId/message?page=$_messagePage');
+        'http://localhost:8090/v1/chat/$_selectedChatId/message?page=$_messagePage',
+      );
+
       if (response.statusCode == 200) {
         final jsonData = response.data;
         final data = jsonData['content'] as List;
+
         if (_messagePage == 0) {
           _messages = [];
         }
-        _messages.insertAll(
-            0,
-            data.map((item) => {
-                  'messageId': item['messageId'],
-                  'userId': item['userId'],
-                  'username': item['username'],
-                  'chatId': item['chatId'],
-                  'message': item['message'],
-                  'status': item['status'],
-                }));
+
+        final messages = data.map((item) => {
+          'messageId': item['messageId'],
+          'userId': item['userId'],
+          'username': item['username'],
+          'chatId': item['chatId'],
+          'message': item['message'],
+          'status': item['status'],
+        }).toList();
+
+        _messages.addAll(messages);
+        if (jsonData['last'] == true || messages.isEmpty) {
+          _hasMoreMessages = false;
+        }
       } else {
         if (kDebugMode) {
           print('fetchMessages: status ${response.statusCode}');
@@ -91,19 +107,24 @@ class MessagesProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('fetchMessages error: $e');
       }
+    } finally {
+      _isLoadingMessages = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   void selectChat(String chatId) {
     _selectedChatId = chatId;
     _messages.clear();
     _messagePage = 0;
+    _hasMoreMessages = true;
     notifyListeners();
   }
 
   Future<void> loadMoreMessages() async {
+    if (_isLoadingMessages || !_hasMoreMessages) return;
     _messagePage++;
+    print('Loading more messages, page: $_messagePage');
     await fetchMessages();
   }
 
@@ -123,7 +144,7 @@ class MessagesProvider extends ChangeNotifier {
   }
 
   void addMessage(Map<String, dynamic> message) {
-    _messages.add(message);
+    _messages.insert(0, message);
     notifyListeners();
   }
 }

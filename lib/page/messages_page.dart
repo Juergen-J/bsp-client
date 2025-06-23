@@ -23,6 +23,8 @@ class MessagesPageState extends State<MessagesPage> {
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   bool _showMessagesOnly = false;
+  bool _isScrollAnimating = false;
+
 
   late StompClientNotifier stompProvider;
   late final Future<bool> _loginCheckFuture;
@@ -45,7 +47,9 @@ class MessagesPageState extends State<MessagesPage> {
     _scrollControllerMessage.addListener(_scrollMessageListener);
 
     stompProvider = Provider.of<StompClientNotifier>(context, listen: false);
-    stompProvider.connectStompClient();
+    if (stompProvider.stompClient == null || !stompProvider.isConnected) {
+      stompProvider.connectStompClient();
+    }
     stompProvider.addListener(() {
       final messagesProv = context.read<MessagesProvider>();
 
@@ -68,12 +72,48 @@ class MessagesPageState extends State<MessagesPage> {
     });
   }
 
-  void _scrollMessageListener() {
-    if (_scrollControllerMessage.position.pixels ==
-        _scrollControllerMessage.position.minScrollExtent) {
-      context.read<MessagesProvider>().loadMoreMessages();
+  void _scrollMessageListener() async {
+    final scrollPos = _scrollControllerMessage.position;
+    final messagesProv = context.read<MessagesProvider>();
+
+    if (_isScrollAnimating) return;
+
+    if (scrollPos.pixels >= scrollPos.maxScrollExtent - 150 &&
+        !messagesProv.isLoadingMessages &&
+        messagesProv.hasMoreMessages) {
+
+      final prevExtentAfter = scrollPos.extentAfter;
+      final oldMessageCount = messagesProv.messages.length;
+
+      _isScrollAnimating = true;
+
+      await messagesProv.loadMoreMessages();
+
+      final newMessageCount = messagesProv.messages.length;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (newMessageCount == oldMessageCount) {
+          _isScrollAnimating = false;
+          return;
+        }
+
+        final newExtentAfter = _scrollControllerMessage.position.extentAfter;
+        final offsetDiff = newExtentAfter - prevExtentAfter;
+        final newOffset = _scrollControllerMessage.offset + offsetDiff;
+
+        if (_scrollControllerMessage.hasClients) {
+          await _scrollControllerMessage.animateTo(
+            newOffset,
+            duration: Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
+
+        _isScrollAnimating = false;
+      });
     }
   }
+
 
   void _sendMessage() {
     final messagesProv = context.read<MessagesProvider>();
@@ -94,7 +134,7 @@ class MessagesPageState extends State<MessagesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollControllerMessage.hasClients) {
         _scrollControllerMessage.animateTo(
-          _scrollControllerMessage.position.maxScrollExtent,
+          0,
           duration: Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -313,6 +353,7 @@ class MessagesPageState extends State<MessagesPage> {
   Widget _buildMessagesView(ColorScheme colorScheme) {
     final messagesProv = context.watch<MessagesProvider>();
     final messages = messagesProv.messages;
+    final userInfo = Provider.of<AuthService>(context, listen: false).getUserInfo();
 
     return Column(
       children: [
@@ -346,11 +387,10 @@ class MessagesPageState extends State<MessagesPage> {
               child: messages.isNotEmpty
                   ? ListView.builder(
                       controller: _scrollControllerMessage,
+                      reverse: true,
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         _listViewContext = context;
-                        final userInfo =
-                            Provider.of<AuthService>(context).getUserInfo();
                         final message = messages[index];
                         final isCurrentUser = message['userId'] == userInfo?.id;
 

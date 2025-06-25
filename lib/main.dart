@@ -29,20 +29,33 @@ void main() async {
   runApp(MultiProvider(providers: [
     ChangeNotifierProvider(create: (_) => AuthRedirectService()),
     ChangeNotifierProvider(
-        create: (_) => AuthService(FlavorConfig.instance.variables['beHost'])),
+      create: (_) {
+        final authService =
+        AuthService(FlavorConfig.instance.variables['beHost']);
+        print("AuthService created");
+        return authService;
+      },
+    ),
     ChangeNotifierProxyProvider<AuthService, StompClientNotifier>(
       create: (context) {
         final authService = context.read<AuthService>();
+        print("StompClientNotifier created");
         return StompClientNotifier(authService);
       },
-      update: (_, authService, stompNotifier) {
-        final stomp = stompNotifier ?? StompClientNotifier(authService);
+      update: (context, authService, stompNotifier) {
+        print("StompClientNotifier updated");
+        stompNotifier ??= StompClientNotifier(authService);
 
+        authService.onLoginCallback = () {
+          stompNotifier!.connectStompClient();
+        };
         authService.onLogoutCallback = () {
-          stomp.stompClient?.deactivate();
+          stompNotifier!.stompClient?.deactivate();
         };
 
-        return stomp;
+        authService.init();
+
+        return stompNotifier;
       },
     ),
     ChangeNotifierProxyProvider<AuthService, MessagesProvider>(

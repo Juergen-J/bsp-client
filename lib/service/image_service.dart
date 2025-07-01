@@ -48,4 +48,6 @@ class ImageService {
       return const Icon(Icons.broken_image);
     }
   }
+
+  uploadImage() {}
 }

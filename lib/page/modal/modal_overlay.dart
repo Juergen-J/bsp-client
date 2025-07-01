@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:berlin_service_portal/page/modal/register_modal.dart';
+import 'package:berlin_service_portal/page/modal/service_form_modal.dart';
 import 'package:berlin_service_portal/page/modal/verify_email_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../model/short_device.dart';
+import '../../model/device/short_device_dto.dart';
 import 'device_form_modal.dart';
 import 'forgot_password_modal.dart';
 import 'login_modal.dart';
@@ -56,7 +57,24 @@ class ModalOverlay extends StatelessWidget {
             completer?.complete(false); // Standard beim Schließen
           },
           isMobile: isMobile,
-          editedDevice: data?['device'] as ShortDevice?,
+          editedDevice: data?['device'] as ShortDeviceDto?,
+          readonly: data?['readonly'] == true,
+          onFinish: (bool success) {
+            modalManager.close();
+            final completer = data?['completer'] as Completer?;
+            completer?.complete(success);
+          },
+        );
+      case ModalType.serviceForm:
+        final data = modalManager.data as Map?;
+        content = ServiceFormModal(
+          onClose: () {
+            modalManager.close();
+            final completer = data?['completer'] as Completer?;
+            completer?.complete(false);
+          },
+          isMobile: isMobile,
+          editedService: data?['service'],
           readonly: data?['readonly'] == true,
           onFinish: (bool success) {
             modalManager.close();

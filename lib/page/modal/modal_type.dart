@@ -5,4 +5,5 @@ enum ModalType {
   resetPassword,
   verifyEmail,
   deviceForm,
+  serviceForm
 }

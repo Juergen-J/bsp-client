@@ -1,106 +1,106 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
+import 'package:berlin_service_portal/model/service/user_service_full_dto.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_flavor/flutter_flavor.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../model/device/brand.dart';
-import '../model/device/device_type.dart';
-import '../model/device/short_device_dto.dart';
+import '../model/address_dto.dart';
+import '../model/attachment/attachment_dto.dart';
+import '../model/attachment/attachment_type.dart';
+import '../model/element_status.dart';
+import '../model/service/service_attribute_dto.dart';
+import '../model/service/short_service_type_dto.dart';
 import '../service/auth_service.dart';
 import '../widgets/cards/add_device_card.dart';
-import '../widgets/cards/device_card.dart';
+import '../widgets/cards/service_card.dart';
 import 'modal/modal_service.dart';
 import 'modal/modal_type.dart';
 
-class DevicesPage extends StatefulWidget {
-  const DevicesPage({super.key});
+class ServicesPage extends StatefulWidget {
+  const ServicesPage({super.key});
 
   @override
-  _DevicesPageState createState() => _DevicesPageState();
+  State<ServicesPage> createState() => _ServicesPageState();
 }
 
-class _DevicesPageState extends State<DevicesPage> {
-  List<ShortDeviceDto> _devices = [];
+class _ServicesPageState extends State<ServicesPage> {
+  List<UserServiceFullDto> _services = [];
 
   @override
   void initState() {
     super.initState();
-    fetchMyDevices();
+    fetchMyServices();
   }
 
-  Future<void> fetchMyDevices() async {
-    final Dio dio = Provider.of<AuthService>(context, listen: false).dio;
-    final response = await dio.get('/v1/device/my');
+  Future<void> fetchMyServices() async {
+    final dio = Provider.of<AuthService>(context, listen: false).dio;
+    final response = await dio.get('/v1/service/my');
 
     if (response.statusCode == 200 && response.data['content'] != null) {
       setState(() {
-        _devices = (response.data['content'] as List)
-            .map((item) => ShortDeviceDto.fromJson(item))
+        _services = (response.data['content'] as List)
+            .map((item) => UserServiceFullDto.fromJson(item))
             .toList();
       });
     } else {
-      print(
-          'Error loading devices: ${response.statusCode} - ${response.statusMessage}');
+      print('Error loading services: ${response.statusCode}');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Equipment"),
-      ),
+      appBar: AppBar(title: const Text("My Services")),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: GridView.builder(
-          itemCount: _devices.length + 1,
+          itemCount: _services.length + 1,
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 300, // ширина карточки = максимум 300
+            maxCrossAxisExtent: 300,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            mainAxisExtent: 330, // фиксированная высота карточки
+            mainAxisExtent: 330,
           ),
           itemBuilder: (context, index) {
-            if (index == _devices.length) {
+            if (index == _services.length) {
               return AddDeviceCard(
+                // переиспользуем виджет
                 onTap: () async {
                   final modalManager = context.read<ModalManager>();
                   final resultCompleter = Completer<bool>();
                   modalManager.show(
-                    ModalType.deviceForm,
+                    ModalType.serviceForm,
                     data: {
-                      'device': null,
+                      'service': null,
                       'readonly': false,
                       'completer': resultCompleter,
                     },
                   );
 
                   final result = await resultCompleter.future;
-                  if (result == true) fetchMyDevices();
+                  if (result == true) fetchMyServices();
                 },
               );
             }
 
-            final device = _devices[index];
-            return DeviceCard(
-              device: device,
+            final service = _services[index];
+            return ServiceCard(
+              service: service,
               onTap: () async {
                 final modalManager = context.read<ModalManager>();
                 final resultCompleter = Completer<bool>();
                 modalManager.show(
-                  ModalType.deviceForm,
+                  ModalType.serviceForm,
                   data: {
-                    'device': device,
+                    'service': service,
                     'readonly': true,
                     'completer': resultCompleter,
                   },
                 );
 
                 final result = await resultCompleter.future;
-                if (result == true) fetchMyDevices();
+                if (result == true) fetchMyServices();
               },
             );
           },

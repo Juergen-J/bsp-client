@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'element_status.dart';
+import '../element_status.dart';
 
 part 'brand.g.dart';
 

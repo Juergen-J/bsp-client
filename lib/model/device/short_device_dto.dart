@@ -1,13 +1,13 @@
 import 'package:berlin_service_portal/model/attachment/attachment_dto.dart';
-import 'package:berlin_service_portal/model/brand.dart';
-import 'package:berlin_service_portal/model/device_type.dart';
+import 'package:berlin_service_portal/model/device/brand.dart';
+import 'package:berlin_service_portal/model/device/device_type.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'attribute_present.dart';
 
-part 'short_device.g.dart';
+part 'short_device_dto.g.dart';
 
 @JsonSerializable()
-class ShortDevice {
+class ShortDeviceDto {
   final String id;
 
   final DeviceType deviceType;
@@ -22,7 +22,7 @@ class ShortDevice {
 
   final List<AttachmentDto> attachments;
 
-  ShortDevice({
+  ShortDeviceDto({
     required this.id,
     required this.deviceType,
     required this.brand,
@@ -32,8 +32,8 @@ class ShortDevice {
     this.attachments = const [],
   });
 
-  factory ShortDevice.fromJson(Map<String, dynamic> json) =>
-      _$ShortDeviceFromJson(json);
+  factory ShortDeviceDto.fromJson(Map<String, dynamic> json) =>
+      _$ShortDeviceDtoFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ShortDeviceToJson(this);
+  Map<String, dynamic> toJson() => _$ShortDeviceDtoToJson(this);
 }

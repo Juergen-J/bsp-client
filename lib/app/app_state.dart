@@ -43,7 +43,7 @@ class AppState extends ChangeNotifier {
     primaryContainer: Color(0xFFE3E7FB),
     onPrimaryContainer: Color(0xFF2754E8),
     surfaceVariant: Color(0xFFF2F4F7),
-    onSurfaceVariant: Color(0xFF707071),
+    onSurfaceVariant: Color(0xFFD9D9D9),
     outline: Color(0xFFCCCCCC),
   );
 

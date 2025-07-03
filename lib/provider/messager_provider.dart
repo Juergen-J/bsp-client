@@ -49,6 +49,7 @@ class MessagesProvider extends ChangeNotifier {
             .map((item) => {
                   'chatId': item['chatId'],
                   'chatName': item['chatName'],
+                  'isOnline': item['isOnline'],
                   'countUnreadMessages': item['countUnreadMessages'],
                   'lastMessage': item['lastMessage'],
                   'lastMessageDate': item['lastMessageDate'],
@@ -113,6 +114,33 @@ class MessagesProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> resetActiveChat() async {
+    if (!isLoggedIn) return;
+
+    try {
+      final response = await _dio.post(
+        'http://localhost:8090/v1/user-status',
+      );
+
+      if (response.statusCode != 204) {
+        if (kDebugMode) {
+          print('reset active chat: status ${response.statusCode}');
+        }
+      } else {
+        _selectedChatId = null;
+        _messages.clear();
+        _messagePage = 0;
+        _hasMoreMessages = true;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('reset active chat error: $e');
+      }
+    } finally {
+      notifyListeners();
+    }
+  }
+
   void selectChat(String chatId) {
     _selectedChatId = chatId;
     _messages.clear();
@@ -145,6 +173,15 @@ class MessagesProvider extends ChangeNotifier {
 
   void addMessage(Map<String, dynamic> message) {
     _messages.insert(0, message);
+    notifyListeners();
+  }
+
+  void updateUserOnlineStatus(String userId, String chatId, bool isOnline) {
+    for (var conversation in _conversations) {
+      if (conversation['chatId']?.contains(chatId) == true) {
+        conversation['isOnline'] = isOnline;
+      }
+    }
     notifyListeners();
   }
 }

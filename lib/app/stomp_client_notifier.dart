@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
@@ -11,6 +12,14 @@ class StompClientNotifier extends ChangeNotifier {
   final AuthService _authService;
 
   StompClient? _stompClient;
+  final Queue<String> messageQueue = Queue<String>();
+  bool _processingMessages = false;
+  final Queue<String> statusQueue = Queue<String>();
+  bool _processingStatuses = false;
+  final Queue<String> reportQueue = Queue<String>();
+  bool _processingReports = false;
+
+  String userStatus = '';
   String report = '';
   String message = '';
   String? userId;
@@ -66,17 +75,30 @@ class StompClientNotifier extends ChangeNotifier {
     print('Connected to WebSocket');
     _subscribeToMessageWs();
     _subscribeToReportWs();
+    _subscribeToUserStatusWs();
   }
 
   void _subscribeToMessageWs() {
     _stompClient?.subscribe(
       destination: '/user/topic/messages',
-      callback: (frame) {
+      callback: (frame) async {
         if (frame.body != null) {
           print('Message received: ${frame.body}');
-          message = frame.body!;
-          report = '';
-          notifyListeners();
+          if (frame.body != null) {
+            messageQueue.add(frame.body!);
+            if (_processingMessages) return;
+
+            _processingMessages = true;
+            while (messageQueue.isNotEmpty) {
+              final msg = messageQueue.removeFirst();
+              message = msg;
+              report = '';
+              userStatus = '';
+              notifyListeners();
+              await Future.delayed(Duration(milliseconds: 10));
+            }
+            _processingMessages = false;
+          }
         }
       },
     );
@@ -85,12 +107,44 @@ class StompClientNotifier extends ChangeNotifier {
   void _subscribeToReportWs() {
     _stompClient?.subscribe(
       destination: '/user/topic/message-reports',
-      callback: (frame) {
+      callback: (frame) async {
         if (frame.body != null) {
-          print('Message received: ${frame.body}');
-          report = frame.body!;
-          message = '';
-          notifyListeners();
+          reportQueue.add(frame.body!);
+          if (_processingReports) return;
+
+          _processingReports = true;
+          while (reportQueue.isNotEmpty) {
+            final msg = reportQueue.removeFirst();
+            message = '';
+            report = msg;
+            userStatus = '';
+            notifyListeners();
+            await Future.delayed(Duration(milliseconds: 10));
+          }
+          _processingReports = false;
+        }
+      },
+    );
+  }
+
+  void _subscribeToUserStatusWs() {
+    _stompClient?.subscribe(
+      destination: '/user/topic/user-status',
+      callback: (frame) async {
+        if (frame.body != null) {
+          statusQueue.add(frame.body!);
+          if (_processingStatuses) return;
+
+          _processingStatuses = true;
+          while (statusQueue.isNotEmpty) {
+            final msg = statusQueue.removeFirst();
+            message = '';
+            report = '';
+            userStatus = msg;
+            notifyListeners();
+            await Future.delayed(Duration(milliseconds: 10));
+          }
+          _processingStatuses = false;
         }
       },
     );

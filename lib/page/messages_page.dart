@@ -236,6 +236,10 @@ class MessagesPageState extends State<MessagesPage> {
                       color: colorScheme.surfaceContainerHighest,
                       child: _buildConversationsView(colorScheme),
                     ),
+                    Container(
+                      width: 1,
+                      color: Colors.grey[300],
+                    ),
                     Expanded(child: _buildMessagesView(colorScheme)),
                   ],
                 );
@@ -259,10 +263,10 @@ class MessagesPageState extends State<MessagesPage> {
         final chatId = conversation['chatId'];
         final isSelected = chatId == selectedChatId;
         final isOnline = conversation['isOnline'] == true;
-        final bgColor = isSelected ? colorScheme.onSurfaceVariant : colorScheme.surface;
-        final infoColor = isSelected ? colorScheme.surface : colorScheme.onSurfaceVariant;
-        final avatarBgColor = isSelected ? colorScheme.surface : colorScheme.onSurfaceVariant;
-        final avatarColor = isSelected ? colorScheme.onSurfaceVariant : colorScheme.surface;
+        final bgColor = isSelected ? colorScheme.onSecondaryFixed : colorScheme.surface;
+        final infoColor = isSelected ? colorScheme.surface : colorScheme.onSecondaryFixed;
+        final avatarBgColor = isSelected ? colorScheme.surface : colorScheme.onSecondaryFixed;
+        final avatarColor = isSelected ? colorScheme.onSecondaryFixed : colorScheme.surface;
 
         return Card(
           color: bgColor,
@@ -447,7 +451,7 @@ class MessagesPageState extends State<MessagesPage> {
                                       child: CircleAvatar(
                                         radius: 14,
                                         backgroundColor: colorScheme.surfaceVariant,
-                                        child: Icon(Icons.person, size: 16, color: colorScheme.onSurfaceVariant),
+                                        child: Icon(Icons.person, size: 16, color: colorScheme.onSecondaryFixed),
                                       ),
                                     ),
                                   Flexible(
@@ -456,7 +460,7 @@ class MessagesPageState extends State<MessagesPage> {
                                       decoration: BoxDecoration(
                                         color: isCurrentUser
                                             ? colorScheme.secondary
-                                            : colorScheme.onSurfaceVariant,
+                                            : colorScheme.onSecondaryFixed,
                                         borderRadius: BorderRadius.only(
                                           topLeft: Radius.circular(16),
                                           topRight: Radius.circular(16),
@@ -499,6 +503,12 @@ class MessagesPageState extends State<MessagesPage> {
                   controller: _controller,
                   minLines: 1,
                   maxLines: 5,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (text) {
+                    if (text.trim().isNotEmpty) {
+                      _sendMessage();
+                    }
+                  },
                   decoration: InputDecoration(
                     hintText: 'Nachricht schreiben...',
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

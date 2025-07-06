@@ -158,19 +158,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                         color: colorScheme.onPrimary),
                     onPressed: onThemeToggle,
                   ),
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      key: avatarKey,
-                      onTap: () => AccountMenuOverlay.show(context, avatarKey),
-                      child: SvgPicture.asset(
-                        'assets/icons/profile.svg',
-                        colorFilter: ColorFilter.mode(
-                            colorScheme.onPrimary, BlendMode.srcIn),
-                        width: 24,
-                        height: 24,
+                  IconButton(
+                    key: avatarKey,
+                    tooltip: 'Account',
+                    icon: SvgPicture.asset(
+                      'assets/icons/profile.svg',
+                      colorFilter: ColorFilter.mode(
+                        colorScheme.onPrimary,
+                        BlendMode.srcIn,
                       ),
+                      width: 24,
+                      height: 24,
                     ),
+                    onPressed: () => AccountMenuOverlay.show(context, avatarKey),
                   ),
                 ],
               ),

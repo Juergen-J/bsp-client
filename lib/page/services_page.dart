@@ -1,16 +1,8 @@
 import 'dart:async';
 
-import 'package:berlin_service_portal/model/service/user_service_full_dto.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:berlin_service_portal/model/service/user_service_short_dto.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../model/address_dto.dart';
-import '../model/attachment/attachment_dto.dart';
-import '../model/attachment/attachment_type.dart';
-import '../model/element_status.dart';
-import '../model/service/service_attribute_dto.dart';
-import '../model/service/short_service_type_dto.dart';
 import '../service/auth_service.dart';
 import '../widgets/cards/add_device_card.dart';
 import '../widgets/cards/service_card.dart';
@@ -25,7 +17,7 @@ class ServicesPage extends StatefulWidget {
 }
 
 class _ServicesPageState extends State<ServicesPage> {
-  List<UserServiceFullDto> _services = [];
+  List<UserServiceShortDto> _services = [];
 
   @override
   void initState() {
@@ -40,7 +32,7 @@ class _ServicesPageState extends State<ServicesPage> {
     if (response.statusCode == 200 && response.data['content'] != null) {
       setState(() {
         _services = (response.data['content'] as List)
-            .map((item) => UserServiceFullDto.fromJson(item))
+            .map((item) => UserServiceShortDto.fromJson(item))
             .toList();
       });
     } else {
@@ -65,7 +57,6 @@ class _ServicesPageState extends State<ServicesPage> {
           itemBuilder: (context, index) {
             if (index == _services.length) {
               return AddDeviceCard(
-                // переиспользуем виджет
                 onTap: () async {
                   final modalManager = context.read<ModalManager>();
                   final resultCompleter = Completer<bool>();

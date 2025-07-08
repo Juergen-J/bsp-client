@@ -5,16 +5,17 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../model/element_status.dart';
-import '../../model/service/service_attribute_dto.dart';
-import '../../model/service/user_service_full_dto.dart';
+import 'package:http_parser/http_parser.dart';
+
 import '../../model/address_dto.dart';
 import '../../model/device/short_device_dto.dart';
+import '../../model/service/service_attribute_dto.dart';
 import '../../model/service/short_service_type_dto.dart';
+import '../../model/service/new_user_service_dto.dart';
+import '../../model/service/user_service_full_dto.dart';
 import '../../service/auth_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../modal/base_modal_wrapper.dart';
-import 'package:http_parser/http_parser.dart';
 
 class ServiceFormModal extends StatefulWidget {
   final VoidCallback onClose;
@@ -38,6 +39,7 @@ class ServiceFormModal extends StatefulWidget {
 
 class _ServiceFormModalState extends State<ServiceFormModal> {
   final _formKey = GlobalKey<FormState>();
+
   String name = '';
   String description = '';
   double price = 0;
@@ -62,6 +64,7 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
       attributes = s.attributes;
       selectedType = s.serviceType;
       selectedDeviceIds = s.devices.map((d) => d.id).toList();
+      // ❗ Пока не загружаем attachments как XFile (можно сделать при необходимости)
     }
     _loadServiceTypes();
     _loadMyDevices();
@@ -110,10 +113,9 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    widget.editedService == null
-                        ? 'Add Service'
-                        : 'Edit Service',
-                    style: Theme.of(context).textTheme.titleLarge),
+                  widget.editedService == null ? 'Add Service' : 'Edit Service',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 24),
                 TextFormField(
                   initialValue: name,
@@ -202,44 +204,29 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
                       final dio =
                           Provider.of<AuthService>(context, listen: false).dio;
 
-                      // Собираем JSON-данные
-                      final dataJson = {
-                        "serviceTypeId": selectedType!.id,
-                        "name": name,
-                        "description": description,
-                        "mainAttachment": pickedImages.isNotEmpty
+                      final newService = NewUserServiceDto(
+                        serviceTypeId: selectedType!.id,
+                        name: name,
+                        description: description,
+                        mainAttachment: pickedImages.isNotEmpty
                             ? pickedImages.first.name
-                            : null,
-                        "devices": selectedDeviceIds,
-                        "price": price,
-                        "attributes":
-                            attributes.map((a) => a.toJson()).toList(),
-                        "address": {
-                          "street1": address.street1,
-                          "city": address.city,
-                          "state": address.state,
-                          "postcode": address.postcode,
-                          "latitude": address.latitude,
-                          "longitude": address.longitude,
-                        },
-                      };
+                            : '',
+                        devices: selectedDeviceIds,
+                        price: price,
+                        attributes: attributes,
+                        address: address,
+                      );
 
-                      // Готовим файлы
                       final attachments = <MultipartFile>[];
                       for (final file in pickedImages) {
                         final bytes = await file.readAsBytes();
-                        attachments.add(
-                          MultipartFile.fromBytes(
-                            bytes,
-                            filename: file.name,
-                          ),
-                        );
+                        attachments.add(MultipartFile.fromBytes(bytes,
+                            filename: file.name));
                       }
 
-                      // Создаем form data
                       final formData = FormData.fromMap({
                         "data": MultipartFile.fromString(
-                          jsonEncode(dataJson),
+                          jsonEncode(newService.toJson()),
                           filename: "data.json",
                           contentType: MediaType("application", "json"),
                         ),
@@ -247,7 +234,13 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
                       });
 
                       try {
-                        await dio.post('/v1/service/my', data: formData);
+                        if (widget.editedService != null) {
+                          // Если есть API для обновления — тут можно использовать PUT
+                          await dio.post('/v1/service/my', data: formData);
+                        } else {
+                          await dio.post('/v1/service/my', data: formData);
+                        }
+
                         widget.onFinish?.call(true);
                         widget.onClose();
                       } catch (e) {

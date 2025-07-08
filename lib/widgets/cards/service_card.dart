@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../model/service/user_service_full_dto.dart';
 import '../../model/attachment/image_attachment_dto.dart';
+import '../../model/service/user_service_short_dto.dart';
 import '../../service/image_service.dart';
 import 'base_card.dart';
 
 class ServiceCard extends StatelessWidget {
-  final UserServiceFullDto service;
+  final UserServiceShortDto service;
   final VoidCallback? onTap;
 
   const ServiceCard({super.key, required this.service, this.onTap});
@@ -64,7 +64,7 @@ class ServiceCard extends StatelessWidget {
     );
   }
 
-  String? _extractSmallImageId(UserServiceFullDto service) {
+  String? _extractSmallImageId(UserServiceShortDto service) {
     final mainAttachment =
         service.attachments.where((a) => a.mainAttachment).firstOrNull;
 

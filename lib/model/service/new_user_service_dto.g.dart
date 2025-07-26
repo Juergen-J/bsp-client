@@ -16,7 +16,7 @@ NewUserServiceDto _$NewUserServiceDtoFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      price: (json['price'] as num).toDouble(),
+      price: (json['price'] as num?)?.toDouble(),
       attributes: (json['attributes'] as List<dynamic>?)
               ?.map((e) =>
                   ServiceAttributeDto.fromJson(e as Map<String, dynamic>))

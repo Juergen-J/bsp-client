@@ -21,7 +21,7 @@ class NewUserServiceDto {
 
   List<String> devices;
 
-  final double price;
+  final double? price;
 
   List<ServiceAttributeDto> attributes;
 

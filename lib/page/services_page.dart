@@ -61,7 +61,7 @@ class _ServicesPageState extends State<ServicesPage> {
                   final modalManager = context.read<ModalManager>();
                   final resultCompleter = Completer<bool>();
                   modalManager.show(
-                    ModalType.serviceForm,
+                    ModalType.serviceCreateForm,
                     data: {
                       'service': null,
                       'readonly': false,
@@ -82,12 +82,8 @@ class _ServicesPageState extends State<ServicesPage> {
                 final modalManager = context.read<ModalManager>();
                 final resultCompleter = Completer<bool>();
                 modalManager.show(
-                  ModalType.serviceForm,
-                  data: {
-                    'service': service,
-                    'readonly': true,
-                    'completer': resultCompleter,
-                  },
+                  ModalType.serviceEditForm,
+                  data: service.id,
                 );
 
                 final result = await resultCompleter.future;

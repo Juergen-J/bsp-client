@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:berlin_service_portal/page/modal/register_modal.dart';
-import 'package:berlin_service_portal/page/modal/service_form_modal.dart';
+import 'package:berlin_service_portal/page/modal/service_create_form_modal.dart';
+import 'package:berlin_service_portal/page/modal/service_edit_form_modal.dart';
 import 'package:berlin_service_portal/page/modal/verify_email_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -65,25 +66,37 @@ class ModalOverlay extends StatelessWidget {
             completer?.complete(success);
           },
         );
-      case ModalType.serviceForm:
+      case ModalType.serviceCreateForm:
         final data = modalManager.data as Map?;
-        content = ServiceFormModal(
+        content = ServiceCreateFormModal(
           onClose: () {
             modalManager.close();
             final completer = data?['completer'] as Completer?;
             completer?.complete(false);
           },
           isMobile: isMobile,
-          editedService: data?['service'],
-          readonly: data?['readonly'] == true,
           onFinish: (bool success) {
             modalManager.close();
             final completer = data?['completer'] as Completer?;
             completer?.complete(success);
           },
         );
-        break;
-
+      case ModalType.serviceEditForm:
+        final data = modalManager.data;
+        if (data is String && data.isNotEmpty) {
+          content = ServiceEditFormModal(
+            onClose: () {
+              modalManager.close();
+            },
+            isMobile: isMobile,
+            serviceId: data,
+            onFinish: (bool success) {
+              modalManager.close();
+            },
+          );
+        } else {
+          content = const Center(child: Text("Invalid service ID"));
+        }
       default:
         content = null;
     }

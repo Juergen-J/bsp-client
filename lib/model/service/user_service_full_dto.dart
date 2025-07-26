@@ -21,7 +21,7 @@ class UserServiceFullDto {
 
   final List<ShortDeviceDto> devices;
 
-  final double price;
+  final double? price;
 
   final List<ServiceAttributeDto> attributes;
 

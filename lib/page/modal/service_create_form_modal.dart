@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -12,32 +11,27 @@ import '../../model/device/short_device_dto.dart';
 import '../../model/service/service_attribute_dto.dart';
 import '../../model/service/short_service_type_dto.dart';
 import '../../model/service/new_user_service_dto.dart';
-import '../../model/service/user_service_full_dto.dart';
 import '../../service/auth_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../modal/base_modal_wrapper.dart';
 
-class ServiceFormModal extends StatefulWidget {
+class ServiceCreateFormModal extends StatefulWidget {
   final VoidCallback onClose;
   final bool isMobile;
-  final UserServiceFullDto? editedService;
   final void Function(bool success)? onFinish;
-  final bool readonly;
 
-  const ServiceFormModal({
+  const ServiceCreateFormModal({
     super.key,
     required this.onClose,
     required this.isMobile,
-    this.editedService,
     this.onFinish,
-    this.readonly = false,
   });
 
   @override
-  State<ServiceFormModal> createState() => _ServiceFormModalState();
+  State<ServiceCreateFormModal> createState() => _ServiceCreateFormModalState();
 }
 
-class _ServiceFormModalState extends State<ServiceFormModal> {
+class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   final _formKey = GlobalKey<FormState>();
 
   String name = '';
@@ -55,17 +49,6 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
   @override
   void initState() {
     super.initState();
-    final s = widget.editedService;
-    if (s != null) {
-      name = s.name;
-      description = s.description;
-      price = s.price;
-      address = s.address;
-      attributes = s.attributes;
-      selectedType = s.serviceType;
-      selectedDeviceIds = s.devices.map((d) => d.id).toList();
-      // ❗ Пока не загружаем attachments как XFile (можно сделать при необходимости)
-    }
     _loadServiceTypes();
     _loadMyDevices();
   }
@@ -113,13 +96,12 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.editedService == null ? 'Add Service' : 'Edit Service',
+                  'Add Service',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 24),
                 TextFormField(
                   initialValue: name,
-                  enabled: !widget.readonly,
                   decoration: const InputDecoration(labelText: 'Name'),
                   onChanged: (v) => name = v,
                 ),
@@ -132,15 +114,12 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
                       child: Text(type.displayName),
                     );
                   }).toList(),
-                  onChanged: widget.readonly
-                      ? null
-                      : (v) => setState(() => selectedType = v),
+                  onChanged: (v) => setState(() => selectedType = v),
                   decoration: const InputDecoration(labelText: 'Category'),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   initialValue: price != 0 ? price.toString() : '',
-                  enabled: !widget.readonly,
                   decoration: const InputDecoration(labelText: 'Price (€)'),
                   keyboardType: TextInputType.number,
                   onChanged: (v) => price = double.tryParse(v) ?? 0,
@@ -148,7 +127,6 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
                 const SizedBox(height: 16),
                 TextFormField(
                   initialValue: description,
-                  enabled: !widget.readonly,
                   maxLines: 5,
                   decoration: const InputDecoration(labelText: 'Description'),
                   onChanged: (v) => description = v,
@@ -156,12 +134,11 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
                 const SizedBox(height: 24),
                 Text('Images', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                if (!widget.readonly)
-                  ImageUploadWidget(
-                    onFilesPicked: (files) =>
-                        setState(() => pickedImages = files),
-                    initialFiles: pickedImages,
-                  ),
+                ImageUploadWidget(
+                  onFilesPicked: (files) =>
+                      setState(() => pickedImages = files),
+                  initialFiles: pickedImages,
+                ),
                 const SizedBox(height: 24),
                 Text('Address', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
@@ -180,78 +157,77 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
                     final isSelected = selectedDeviceIds.contains(device.id);
                     return CheckboxListTile(
                       value: isSelected,
-                      onChanged: widget.readonly
-                          ? null
-                          : (v) {
-                              setState(() {
-                                if (v == true) {
-                                  selectedDeviceIds.add(device.id);
-                                } else {
-                                  selectedDeviceIds.remove(device.id);
-                                }
-                              });
-                            },
+                      onChanged: (v) {
+                        setState(() {
+                          if (v == true) {
+                            selectedDeviceIds.add(device.id);
+                          } else {
+                            selectedDeviceIds.remove(device.id);
+                          }
+                        });
+                      },
                       title: Text(device.name),
                     );
-                  }).toList(),
+                  }),
                 ],
                 const SizedBox(height: 24),
-                if (!widget.readonly)
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (!_formKey.currentState!.validate()) return;
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!_formKey.currentState!.validate()) return;
 
-                      final dio =
-                          Provider.of<AuthService>(context, listen: false).dio;
+                    final dio =
+                        Provider.of<AuthService>(context, listen: false).dio;
 
-                      final newService = NewUserServiceDto(
-                        serviceTypeId: selectedType!.id,
-                        name: name,
-                        description: description,
-                        mainAttachment: pickedImages.isNotEmpty
-                            ? pickedImages.first.name
-                            : '',
-                        devices: selectedDeviceIds,
-                        price: price,
-                        attributes: attributes,
-                        address: address,
-                      );
+                    final newService = NewUserServiceDto(
+                      serviceTypeId: selectedType!.id,
+                      name: name,
+                      description: description,
+                      mainAttachment: pickedImages.isNotEmpty
+                          ? pickedImages.first.name
+                          : '',
+                      devices: selectedDeviceIds,
+                      price: price,
+                      attributes: attributes,
+                      address: address,
+                    );
 
-                      final attachments = <MultipartFile>[];
-                      for (final file in pickedImages) {
-                        final bytes = await file.readAsBytes();
-                        attachments.add(MultipartFile.fromBytes(bytes,
-                            filename: file.name));
-                      }
+                    final attachments = <MultipartFile>[];
 
-                      final formData = FormData.fromMap({
-                        "data": MultipartFile.fromString(
-                          jsonEncode(newService.toJson()),
-                          filename: "data.json",
-                          contentType: MediaType("application", "json"),
+                    for (final file in pickedImages) {
+                      final bytes = await file.readAsBytes();
+                      attachments.add(
+                        MultipartFile.fromBytes(
+                          bytes,
+                          filename: file.name,
+                          contentType: MediaType('image', 'jpeg'),
                         ),
-                        "attachments": attachments,
-                      });
+                      );
+                    }
 
-                      try {
-                        if (widget.editedService != null) {
-                          // Если есть API для обновления — тут можно использовать PUT
-                          await dio.post('/v1/service/my', data: formData);
-                        } else {
-                          await dio.post('/v1/service/my', data: formData);
-                        }
+                    final formData = FormData.fromMap({
+                      "data": MultipartFile.fromString(
+                        jsonEncode(newService.toJson()),
+                        filename: "data.json",
+                        contentType: MediaType("application", "json"),
+                      ),
+                      "attachments": attachments,
+                    });
 
-                        widget.onFinish?.call(true);
-                        widget.onClose();
-                      } catch (e) {
-                        print('Error creating service: $e');
+                    try {
+                      await dio.post('/v1/service/my', data: formData);
+                      widget.onFinish?.call(true);
+                      widget.onClose();
+                    } catch (e) {
+                      print('Error creating service: $e');
+                      if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Error creating service: $e')),
                         );
                       }
-                    },
-                    child: const Text('Save'),
-                  ),
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
               ],
             ),
           ),
@@ -264,7 +240,6 @@ class _ServiceFormModalState extends State<ServiceFormModal> {
       String label, String? initial, void Function(String) onChanged) {
     return TextFormField(
       initialValue: initial ?? '',
-      enabled: !widget.readonly,
       decoration: InputDecoration(labelText: label),
       onChanged: onChanged,
     );

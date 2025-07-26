@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/page/services_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -124,7 +125,7 @@ final GoRouter router = GoRouter(
             GoRoute(
               path: '/service',
               name: 'service',
-              builder: (context, state) => const Placeholder(),
+              builder: (context, state) => const ServicesPage(),
             ),
           ],
         ),

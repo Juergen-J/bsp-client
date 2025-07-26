@@ -1,12 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'short_device.dart';
+part of 'short_device_dto.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-ShortDevice _$ShortDeviceFromJson(Map<String, dynamic> json) => ShortDevice(
+ShortDeviceDto _$ShortDeviceDtoFromJson(Map<String, dynamic> json) =>
+    ShortDeviceDto(
       id: json['id'] as String,
       deviceType:
           DeviceType.fromJson(json['deviceType'] as Map<String, dynamic>),
@@ -23,7 +24,7 @@ ShortDevice _$ShortDeviceFromJson(Map<String, dynamic> json) => ShortDevice(
           const [],
     );
 
-Map<String, dynamic> _$ShortDeviceToJson(ShortDevice instance) =>
+Map<String, dynamic> _$ShortDeviceDtoToJson(ShortDeviceDto instance) =>
     <String, dynamic>{
       'id': instance.id,
       'deviceType': instance.deviceType,

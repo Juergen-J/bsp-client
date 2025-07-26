@@ -17,21 +17,22 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double contentWidth;
   final double height;
 
-  const CustomAppBar(
-      {super.key,
-      required this.isDarkMode,
-      required this.onThemeToggle,
-      required this.avatarKey,
-      required this.languageKey,
-      required this.contentWidth,
-      required this.height});
+  const CustomAppBar({super.key,
+    required this.isDarkMode,
+    required this.onThemeToggle,
+    required this.avatarKey,
+    required this.languageKey,
+    required this.contentWidth,
+    required this.height});
 
   @override
   Size get preferredSize => Size.fromHeight(height);
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final colorScheme = Theme
+        .of(context)
+        .colorScheme;
     final appState = Provider.of<AppState>(context);
     final locale = appState.locale;
 
@@ -157,16 +158,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                         color: colorScheme.onPrimary),
                     onPressed: onThemeToggle,
                   ),
-                  GestureDetector(
+                  IconButton(
                     key: avatarKey,
-                    onTap: () => AccountMenuOverlay.show(context, avatarKey),
-                    child: SvgPicture.asset(
+                    tooltip: 'Account',
+                    icon: SvgPicture.asset(
                       'assets/icons/profile.svg',
                       colorFilter: ColorFilter.mode(
-                          colorScheme.onPrimary, BlendMode.srcIn),
+                        colorScheme.onPrimary,
+                        BlendMode.srcIn,
+                      ),
                       width: 24,
                       height: 24,
                     ),
+                    onPressed: () => AccountMenuOverlay.show(context, avatarKey),
                   ),
                 ],
               ),

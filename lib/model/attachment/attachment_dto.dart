@@ -8,26 +8,33 @@ part 'attachment_dto.g.dart';
 @JsonSerializable()
 class AttachmentDto {
   final String id;
-
   final bool mainAttachment;
-
   final AttachmentType type;
 
   @JsonKey(ignore: true)
-  late final AttachmentDtoDetails details;
+  AttachmentDtoDetails? details;
 
-  AttachmentDto(
-      {required this.id, required this.mainAttachment, required this.type});
+  AttachmentDto({
+    required this.id,
+    required this.mainAttachment,
+    required this.type,
+    this.details,
+  });
 
   factory AttachmentDto.fromJson(Map<String, dynamic> json) {
     final type = $enumDecode<AttachmentType, String>(
         _$AttachmentTypeEnumMap, json['type']);
+
     final dto = AttachmentDto(
       id: json['id'] as String,
       mainAttachment: json['mainAttachment'] as bool,
       type: type,
     );
-    dto.details = _parseDetails(json['details'], type);
+
+    if (json['details'] != null) {
+      dto.details = _parseDetails(json['details'], type);
+    }
+
     return dto;
   }
 
@@ -35,13 +42,13 @@ class AttachmentDto {
         'id': id,
         'mainAttachment': mainAttachment,
         'type': _$AttachmentTypeEnumMap[type]!,
-        'details': details.toJson(),
+        if (details != null) 'details': details!.toJson(),
       };
 
   static AttachmentDtoDetails _parseDetails(dynamic json, AttachmentType type) {
     switch (type) {
       case AttachmentType.IMAGE:
-        return ImageAttachmentDto.fromJson(json);
+        return ImageAttachmentDto.fromJson(json as Map<String, dynamic>);
       case AttachmentType.VIDEO:
         throw UnsupportedError('Video attachments are not supported.');
       case AttachmentType.DOCUMENT:

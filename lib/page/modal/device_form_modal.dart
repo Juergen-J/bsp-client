@@ -4,9 +4,9 @@ import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:provider/provider.dart';
 
 import '../../model/attachment/image_attachment_dto.dart';
-import '../../model/brand.dart';
-import '../../model/device_type.dart';
-import '../../model/short_device.dart';
+import '../../model/device/brand.dart';
+import '../../model/device/device_type.dart';
+import '../../model/device/short_device_dto.dart';
 import '../../service/auth_service.dart';
 import '../../widgets/device_image_carousel.dart';
 import 'base_modal_wrapper.dart';
@@ -14,7 +14,7 @@ import 'base_modal_wrapper.dart';
 class DeviceFormModal extends StatefulWidget {
   final VoidCallback onClose;
   final bool isMobile;
-  final ShortDevice? editedDevice;
+  final ShortDeviceDto? editedDevice;
   final void Function(bool success)? onFinish;
   final bool readonly;
 
@@ -37,10 +37,10 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
 
   DeviceType? selectedDeviceType;
   Brand? selectedBrand;
-  ShortDevice? selectedModel;
+  ShortDeviceDto? selectedModel;
   List<DeviceType> deviceTypeList = [];
   List<Brand> brandList = [];
-  List<ShortDevice> deviceList = [];
+  List<ShortDeviceDto> deviceList = [];
 
   @override
   void initState() {
@@ -89,7 +89,7 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
     if (response.statusCode == 200 && response.data['content'] != null) {
       setState(() {
         deviceList = (response.data['content'] as List)
-            .map((item) => ShortDevice.fromJson(item))
+            .map((item) => ShortDeviceDto.fromJson(item))
             .toList();
         if (deviceList.isEmpty) {
           deviceName = '${selectedBrand?.name ?? ''}';
@@ -120,7 +120,7 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
     }
   }
 
-  Future<void> prefillForm(ShortDevice device) async {
+  Future<void> prefillForm(ShortDeviceDto device) async {
     selectedDeviceType =
         deviceTypeList.firstWhere((dt) => dt.id == device.deviceType.id);
 
@@ -212,7 +212,7 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
                 ),
               const SizedBox(height: 16),
               if (selectedBrand != null && deviceList.isNotEmpty)
-                DropdownButtonFormField<ShortDevice>(
+                DropdownButtonFormField<ShortDeviceDto>(
                   decoration: const InputDecoration(labelText: "Modell"),
                   items: deviceList
                       .map((d) =>

@@ -65,6 +65,17 @@ class MessagesPageState extends State<MessagesPage> {
         _runManualListObserve();
       }
 
+      if (stompProvider.userStatus.isNotEmpty) {
+        final userStatus = jsonDecode(stompProvider.userStatus);
+        final userId = userStatus['userId'];
+        final chatId = userStatus['chatId'];
+        final status = userStatus['status'];
+
+        final isOnline = status == 'ONLINE';
+        messagesProv.updateUserOnlineStatus(userId, chatId, isOnline);
+
+      }
+
       if (stompProvider.report.isNotEmpty) {
         final report = jsonDecode(stompProvider.report);
         messagesProv.fetchConversations();
@@ -197,32 +208,13 @@ class MessagesPageState extends State<MessagesPage> {
       backgroundColor: colorScheme.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        toolbarHeight: 110,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Nachrichten"),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Nachricht finden',
-                prefixIcon: Icon(Icons.search),
-                filled: true,
-                fillColor: colorScheme.surfaceVariant,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: EdgeInsets.symmetric(vertical: 0),
-              ),
-            ),
-          ],
-        ),
+        toolbarHeight: 56,
         leading: _showMessagesOnly
             ? IconButton(
                 icon: Icon(Icons.arrow_back),
                 onPressed: () {
+                  final messagesProv = context.read<MessagesProvider>();
+                  messagesProv.resetActiveChat();
                   setState(() {
                     _showMessagesOnly = false;
                   });
@@ -237,22 +229,20 @@ class MessagesPageState extends State<MessagesPage> {
                 ? _buildMessagesView(colorScheme)
                 : _buildConversationsView(colorScheme);
           } else {
-            return Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 1000),
-                child: Row(
+            return Row(
                   children: [
                     Container(
                       width: 300,
                       color: colorScheme.surfaceContainerHighest,
                       child: _buildConversationsView(colorScheme),
                     ),
+                    Container(
+                      width: 1,
+                      color: Colors.grey[300],
+                    ),
                     Expanded(child: _buildMessagesView(colorScheme)),
                   ],
-                ),
-              ),
-            );
+                );
           }
         },
       ),
@@ -262,15 +252,24 @@ class MessagesPageState extends State<MessagesPage> {
   Widget _buildConversationsView(ColorScheme colorScheme) {
     final messagesProv = context.watch<MessagesProvider>();
     final conversations = messagesProv.conversations;
+    final selectedChatId = messagesProv.selectedChatId;
 
-    return ListView.builder(
+    return ListView.separated(
       itemCount: conversations.length,
+      separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[300]),
       itemBuilder: (context, index) {
         final conversation = conversations[index];
         final countUnreadMessages = conversation['countUnreadMessages'] ?? 0;
+        final chatId = conversation['chatId'];
+        final isSelected = chatId == selectedChatId;
+        final isOnline = conversation['isOnline'] == true;
+        final bgColor = isSelected ? colorScheme.onSecondaryFixed : colorScheme.surface;
+        final infoColor = isSelected ? colorScheme.surface : colorScheme.onSecondaryFixed;
+        final avatarBgColor = isSelected ? colorScheme.surface : colorScheme.onSecondaryFixed;
+        final avatarColor = isSelected ? colorScheme.onSecondaryFixed : colorScheme.surface;
 
         return Card(
-          color: colorScheme.surface,
+          color: bgColor,
           elevation: 0,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: InkWell(
@@ -288,21 +287,55 @@ class MessagesPageState extends State<MessagesPage> {
               child: Row(
                 children: [
                   Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       CircleAvatar(
-                        backgroundColor: colorScheme.primary,
-                        child: Icon(Icons.person, color: colorScheme.onPrimary),
+                        backgroundColor: avatarBgColor,
+                        child: Icon(
+                          Icons.person,
+                          color: avatarColor,
+                          size: 24,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: isOnline ? colorScheme.primary : colorScheme.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isOnline ? colorScheme.surface : colorScheme.primary,
+                              width: 1.8,
+                            ),
+                          ),
+                        ),
                       ),
                       if (countUnreadMessages > 0)
                         Positioned(
-                          bottom: 0,
-                          right: 0,
+                          top: -6,
+                          right: -6,
                           child: Container(
-                            width: 10,
-                            height: 10,
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
+                              color: colorScheme.primary,
+                              shape: BoxShape.rectangle,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 20,
+                              minHeight: 20,
+                            ),
+                            child: Text(
+                              '$countUnreadMessages',
+                              style: TextStyle(
+                                color: colorScheme.surface,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -316,18 +349,18 @@ class MessagesPageState extends State<MessagesPage> {
                         Text(
                           conversation['chatName'] ?? 'No name',
                           style: TextStyle(
-                            fontWeight: countUnreadMessages > 0
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                            fontWeight: FontWeight.bold,
                             color: colorScheme.onSurface,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           conversation['lastMessage'] ?? '',
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                           style: TextStyle(
-                            color: colorScheme.onSurface.withValues(alpha: 0.7),
+                            color: infoColor,
                           ),
                         ),
                       ],
@@ -337,7 +370,7 @@ class MessagesPageState extends State<MessagesPage> {
                   Text(
                     calculateConversationDate(conversation['lastMessageDate']),
                     style: TextStyle(
-                      color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: infoColor,
                       fontSize: 12,
                     ),
                   ),
@@ -352,22 +385,27 @@ class MessagesPageState extends State<MessagesPage> {
 
   Widget _buildMessagesView(ColorScheme colorScheme) {
     final messagesProv = context.watch<MessagesProvider>();
+    final selectedChatId = messagesProv.selectedChatId;
     final messages = messagesProv.messages;
     final userInfo = Provider.of<AuthService>(context, listen: false).getUserInfo();
+    if (selectedChatId == null) {
+      return Center(
+        child: Text(
+          'Bitte wählen Sie einen Chat aus',
+          style: TextStyle(
+            color: colorScheme.onSurface.withOpacity(0.6),
+            fontSize: 16,
+          ),
+        ),
+      );
+    }
 
     return Column(
       children: [
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  colorScheme.secondaryContainer,
-                  colorScheme.surface,
-                ],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              ),
+              color: colorScheme.onPrimary,
             ),
             child: ListViewObserver(
               onObserve: (resultMap) {
@@ -394,28 +432,53 @@ class MessagesPageState extends State<MessagesPage> {
                         final message = messages[index];
                         final isCurrentUser = message['userId'] == userInfo?.id;
 
-                        return Container(
-                          alignment: isCurrentUser
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          margin: const EdgeInsets.symmetric(
-                              vertical: 5, horizontal: 10),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: isCurrentUser
-                                  ? colorScheme.primaryContainer
-                                  : colorScheme.secondaryContainer,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              message['message'] ?? '',
-                              style: TextStyle(
-                                color: isCurrentUser
-                                    ? colorScheme.onPrimaryContainer
-                                    : colorScheme.onSecondaryContainer,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          child: Column(
+                            crossAxisAlignment: isCurrentUser
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: isCurrentUser
+                                    ? MainAxisAlignment.end
+                                    : MainAxisAlignment.start,
+                                children: [
+                                  if (!isCurrentUser)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: colorScheme.surfaceVariant,
+                                        child: Icon(Icons.person, size: 16, color: colorScheme.onSecondaryFixed),
+                                      ),
+                                    ),
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isCurrentUser
+                                            ? colorScheme.secondary
+                                            : colorScheme.onSecondaryFixed,
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: Radius.circular(16),
+                                          topRight: Radius.circular(16),
+                                          bottomLeft: Radius.circular(16),
+                                          bottomRight: Radius.circular(16),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        message['message'] ?? '',
+                                        style: TextStyle(
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                            ],
                           ),
                         );
                       },
@@ -431,24 +494,44 @@ class MessagesPageState extends State<MessagesPage> {
             ),
           ),
         ),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _controller,
-                minLines: 1,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Send a message',
-                  border: OutlineInputBorder(),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  minLines: 1,
+                  maxLines: 5,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (text) {
+                    if (text.trim().isNotEmpty) {
+                      _sendMessage();
+                    }
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Nachricht schreiben...',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    filled: true,
+                    fillColor: colorScheme.surfaceVariant,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: _sendMessage,
-            ),
-          ],
+              const SizedBox(width: 8),
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: colorScheme.primary,
+                child: IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: _sendMessage,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

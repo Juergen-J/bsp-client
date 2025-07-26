@@ -1,12 +1,12 @@
+import 'package:berlin_service_portal/model/device/short_device_dto.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../model/attachment/image_attachment_dto.dart';
-import '../../model/short_device.dart';
 import '../../service/image_service.dart';
 import 'base_card.dart';
 
 class DeviceCard extends StatelessWidget {
-  final ShortDevice device;
+  final ShortDeviceDto device;
   final VoidCallback? onTap;
 
   const DeviceCard({super.key, required this.device, this.onTap});
@@ -64,7 +64,7 @@ class DeviceCard extends StatelessWidget {
         });
   }
 
-  String? _extractSmallImageId(ShortDevice device) {
+  String? _extractSmallImageId(ShortDeviceDto device) {
     final mainAttachment =
         device.attachments.where((a) => a.mainAttachment).firstOrNull;
 

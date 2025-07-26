@@ -6,9 +6,9 @@ import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../model/brand.dart';
-import '../model/device_type.dart';
-import '../model/short_device.dart';
+import '../model/device/brand.dart';
+import '../model/device/device_type.dart';
+import '../model/device/short_device_dto.dart';
 import '../service/auth_service.dart';
 import '../widgets/cards/add_device_card.dart';
 import '../widgets/cards/device_card.dart';
@@ -23,7 +23,7 @@ class DevicesPage extends StatefulWidget {
 }
 
 class _DevicesPageState extends State<DevicesPage> {
-  List<ShortDevice> _devices = [];
+  List<ShortDeviceDto> _devices = [];
 
   @override
   void initState() {
@@ -38,7 +38,7 @@ class _DevicesPageState extends State<DevicesPage> {
     if (response.statusCode == 200 && response.data['content'] != null) {
       setState(() {
         _devices = (response.data['content'] as List)
-            .map((item) => ShortDevice.fromJson(item))
+            .map((item) => ShortDeviceDto.fromJson(item))
             .toList();
       });
     } else {

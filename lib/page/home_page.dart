@@ -141,6 +141,9 @@ class _HomePageState extends State<HomePage> {
             )
           else
             Wrap(
+              alignment: WrapAlignment.start,
+              crossAxisAlignment: WrapCrossAlignment.start,
+              runAlignment: WrapAlignment.start,
               spacing: 12,
               runSpacing: 12,
               children: _results.map((service) {

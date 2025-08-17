@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:berlin_service_portal/app/app_state.dart';
 import 'package:berlin_service_portal/model/service/short_service_type_dto.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
@@ -17,7 +16,6 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final GlobalKey avatarKey;
   final GlobalKey languageKey;
 
-  // todo mobile view
   final double contentWidth;
   final double height;
 
@@ -40,23 +38,21 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
 
 class _CustomAppBarState extends State<CustomAppBar> {
   final _searchController = TextEditingController();
-  Timer? _debounce;
 
   List<ShortServiceTypeDto> _categories = [];
-  String? _selectedCategoryId;
+  String? _selectedCategoryId; // null = All
   bool _loadingCats = true;
 
   @override
   void initState() {
     super.initState();
     _searchController.text = homeSearchQuery.value;
-    _selectedCategoryId = homeSelectedCategoryId.value;
+    _selectedCategoryId = homeSelectedCategoryId.value; // может быть null
     _fetchCategories();
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -69,16 +65,10 @@ class _CustomAppBarState extends State<CustomAppBar> {
         final items = (resp.data['content'] as List)
             .map((e) => ShortServiceTypeDto.fromJson(e))
             .toList();
-
         setState(() {
           _categories = items;
           _loadingCats = false;
         });
-
-        // Если категория ещё не выбрана – поставим первую
-        if (homeSelectedCategoryId.value == null && items.isNotEmpty) {
-          _onSelectCategory(items.first.id);
-        }
       } else {
         setState(() => _loadingCats = false);
       }
@@ -87,16 +77,19 @@ class _CustomAppBarState extends State<CustomAppBar> {
     }
   }
 
-  void _onQueryChanged(String v) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), () {
-      homeSearchQuery.value = v;
-    });
+  void _applySearch() {
+    // ТОЛЬКО тут дергаем поиск
+    final q = _searchController.text.trim();
+    // Если хочешь игнорировать 1-символьные — раскомментируй:
+    // if (q.isNotEmpty && q.length < 2) return;
+    homeSearchQuery.value = q; // пусть Home сам справится с пустой строкой
+    // категория применяется через homeSelectedCategoryId, но без автопоиска
   }
 
   void _onSelectCategory(String? id) {
     setState(() => _selectedCategoryId = id);
     homeSelectedCategoryId.value = id;
+    // ВНИМАНИЕ: поиск не запускаем — будет учтен на следующем Enter/лупе
   }
 
   @override
@@ -119,16 +112,22 @@ class _CustomAppBarState extends State<CustomAppBar> {
               // logo
               Row(
                 children: [
-                  Text('Find',
-                      style: TextStyle(
-                          color: colorScheme.onPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500)),
-                  Text('Xpert',
-                      style: TextStyle(
-                          color: colorScheme.onPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    'Find',
+                    style: TextStyle(
+                      color: colorScheme.onPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'Xpert',
+                    style: TextStyle(
+                      color: colorScheme.onPrimary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(width: 16),
                 ],
               ),
@@ -144,44 +143,53 @@ class _CustomAppBarState extends State<CustomAppBar> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     children: [
-                      const Icon(Icons.search),
-                      const SizedBox(width: 8),
+                      // кнопка запуска поиска
+                      IconButton(
+                        tooltip: 'Search',
+                        icon: const Icon(Icons.search),
+                        onPressed: _applySearch,
+                      ),
+                      const SizedBox(width: 4),
 
                       // категория
                       if (_loadingCats)
                         const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2))
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       else
                         DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
+                          child: DropdownButton<String?>(
                             value: _selectedCategoryId,
+                            // null = All
                             hint: const Text('All'),
                             isDense: true,
-                            items: _categories
-                                .map((c) => DropdownMenuItem(
-                                      value: c.id,
-                                      child: Text(
-                                        c.displayName,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ))
-                                .toList(),
+                            items: <DropdownMenuItem<String?>>[
+                              const DropdownMenuItem(
+                                value: null,
+                                child: Text('All'),
+                              ),
+                              ..._categories.map(
+                                (c) => DropdownMenuItem<String?>(
+                                  value: c.id,
+                                  child: Text(
+                                    c.displayName,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
                             onChanged: _onSelectCategory,
                           ),
                         ),
 
                       const SizedBox(width: 8),
                       // разделитель
-                      Container(
-                        width: 1,
-                        height: 20,
-                        color: Colors.black12,
-                      ),
+                      Container(width: 1, height: 20, color: Colors.black12),
                       const SizedBox(width: 8),
 
-                      // поле поиска
+                      // поле поиска (без автозапросов, только Enter)
                       Expanded(
                         child: TextField(
                           controller: _searchController,
@@ -190,8 +198,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
                             border: InputBorder.none,
                             isDense: true,
                           ),
-                          onChanged: _onQueryChanged,
-                          onSubmitted: (v) => homeSearchQuery.value = v,
+                          onSubmitted: (_) => _applySearch(),
                         ),
                       ),
 
@@ -218,7 +225,9 @@ class _CustomAppBarState extends State<CustomAppBar> {
                       icon: SvgPicture.asset(
                         'assets/icons/language.svg',
                         colorFilter: ColorFilter.mode(
-                            colorScheme.onPrimary, BlendMode.srcIn),
+                          colorScheme.onPrimary,
+                          BlendMode.srcIn,
+                        ),
                         width: 24,
                         height: 24,
                       ),
@@ -243,16 +252,18 @@ class _CustomAppBarState extends State<CustomAppBar> {
                       child: Text(
                         locale.languageCode.toUpperCase(),
                         style: TextStyle(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10),
+                          color: colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
                       ),
-                    )
+                    ),
                   ]),
                   IconButton(
                     icon: Icon(
-                        widget.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                        color: colorScheme.onPrimary),
+                      widget.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                      color: colorScheme.onPrimary,
+                    ),
                     onPressed: widget.onThemeToggle,
                   ),
                   IconButton(

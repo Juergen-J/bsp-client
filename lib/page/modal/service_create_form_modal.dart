@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:provider/provider.dart';
 
 import '../../model/address_dto.dart';
 import '../../model/device/short_device_dto.dart';
+import '../../model/service/new_user_service_dto.dart';
+import '../../model/service/price_dto.dart';
 import '../../model/service/service_attribute_dto.dart';
 import '../../model/service/short_service_type_dto.dart';
-import '../../model/service/new_user_service_dto.dart';
-import '../../model/service/price_dto.dart'; // ← NEW
 import '../../service/auth_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../modal/base_modal_wrapper.dart';
@@ -38,14 +39,13 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   String name = '';
   String description = '';
 
-  // --- PRICE (PriceDto) ---
-  String priceAmount = ''; // хранится как строка для точности
+  // Price (PriceDto)
+  String priceAmount = '';
   String currencyCode = 'EUR';
   String currencyName = 'Euro';
   bool negotiable = false;
 
   AddressDto address = AddressDto();
-  List<ServiceAttributeDto> attributes = []; // UI-хук оставлен ниже (TODO)
   List<ShortServiceTypeDto> serviceTypes = [];
   ShortServiceTypeDto? selectedType;
 
@@ -53,11 +53,22 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   List<String> selectedDeviceIds = [];
   List<XFile> pickedImages = [];
 
+  // Attribute editors
+  final List<TextEditingController> _attrPropCtrls = [];
+  final List<TextEditingController> _attrValCtrls = [];
+
   @override
   void initState() {
     super.initState();
     _loadServiceTypes();
     _loadMyDevices();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _attrPropCtrls) c.dispose();
+    for (final c in _attrValCtrls) c.dispose();
+    super.dispose();
   }
 
   Future<void> _loadServiceTypes() async {
@@ -85,6 +96,34 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
             .toList();
       });
     }
+  }
+
+  void _addEmptyAttributeRow() {
+    setState(() {
+      _attrPropCtrls.add(TextEditingController());
+      _attrValCtrls.add(TextEditingController());
+    });
+  }
+
+  void _removeAttributeRow(int index) {
+    setState(() {
+      _attrPropCtrls[index].dispose();
+      _attrValCtrls[index].dispose();
+      _attrPropCtrls.removeAt(index);
+      _attrValCtrls.removeAt(index);
+    });
+  }
+
+  List<ServiceAttributeDto> _collectAttributes() {
+    final list = <ServiceAttributeDto>[];
+    for (var i = 0; i < _attrPropCtrls.length; i++) {
+      final prop = _attrPropCtrls[i].text.trim();
+      final val = _attrValCtrls[i].text.trim();
+      if (prop.isNotEmpty && val.isNotEmpty) {
+        list.add(ServiceAttributeDto(prop, val));
+      }
+    }
+    return list;
   }
 
   @override
@@ -119,19 +158,19 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                 // CATEGORY
                 DropdownButtonFormField<ShortServiceTypeDto>(
                   value: selectedType,
-                  items: serviceTypes.map((type) {
-                    return DropdownMenuItem(
-                      value: type,
-                      child: Text(type.displayName),
-                    );
-                  }).toList(),
+                  items: serviceTypes
+                      .map((type) => DropdownMenuItem(
+                            value: type,
+                            child: Text(type.displayName),
+                          ))
+                      .toList(),
                   onChanged: (v) => setState(() => selectedType = v),
                   decoration: const InputDecoration(labelText: 'Category'),
                   validator: (v) => v == null ? 'Select category' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // --- PRICE (PriceDto fields) ---
+                // PRICE
                 Text('Price', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -241,10 +280,64 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
 
                 const SizedBox(height: 24),
 
-                // ATTRIBUTES (hook / optional UI)
-                // TODO: добавь свой редактор атрибутов, если нужно.
-                // Сейчас отправится пустой список attributes.
+                // ATTRIBUTES
+                Text('Attributes',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                if (_attrPropCtrls.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'No attributes. Add some if needed.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                Column(
+                  children: List.generate(_attrPropCtrls.length, (i) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              controller: _attrPropCtrls[i],
+                              decoration:
+                                  const InputDecoration(labelText: 'Property'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: TextFormField(
+                              controller: _attrValCtrls[i],
+                              decoration:
+                                  const InputDecoration(labelText: 'Value'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _removeAttributeRow(i),
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Remove',
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add attribute'),
+                    onPressed: _addEmptyAttributeRow,
+                  ),
+                ),
+                const SizedBox(height: 24),
 
+                // SAVE
                 ElevatedButton(
                   onPressed: () async {
                     if (!_formKey.currentState!.validate()) return;
@@ -252,21 +345,20 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                     final dio =
                         Provider.of<AuthService>(context, listen: false).dio;
 
-                    // Подготовим mainAttachment как имя первого файла (если нужно — замени на id после загрузки)
                     final mainAttachmentName =
                         pickedImages.isNotEmpty ? pickedImages.first.name : '';
 
-                    // Нормализуем amount (замена запятой на точку)
                     final normalizedAmount = priceAmount.replaceAll(',', '.');
                     final amountNum = num.parse(normalizedAmount);
 
-                    // Собираем PriceDto
                     final priceDto = PriceDto(
-                      amountNum, // amount: String
+                      amountNum,
                       currencyCode,
                       currencyName,
                       negotiable,
                     );
+
+                    final collectedAttrs = _collectAttributes();
 
                     final newService = NewUserServiceDto(
                       serviceTypeId: selectedType!.id,
@@ -275,11 +367,10 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                       mainAttachment: mainAttachmentName,
                       devices: selectedDeviceIds,
                       price: priceDto,
-                      attributes: attributes,
+                      attributes: collectedAttrs,
                       address: address,
                     );
 
-                    // Файлы-вложения
                     final attachments = <MultipartFile>[];
                     for (final file in pickedImages) {
                       final bytes = await file.readAsBytes();

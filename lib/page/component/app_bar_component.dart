@@ -1,13 +1,17 @@
+import 'dart:async';
 import 'package:berlin_service_portal/app/app_state.dart';
+import 'package:berlin_service_portal/model/service/short_service_type_dto.dart';
+import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/router.dart' show homeSearchQuery, homeSelectedCategoryId;
 import '../../util/user_info_sammler.dart';
 import 'account_menu_overlay.dart';
 import 'context_menu.dart';
 
-class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
   final GlobalKey avatarKey;
@@ -17,22 +21,87 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double contentWidth;
   final double height;
 
-  const CustomAppBar({super.key,
+  const CustomAppBar({
+    super.key,
     required this.isDarkMode,
     required this.onThemeToggle,
     required this.avatarKey,
     required this.languageKey,
     required this.contentWidth,
-    required this.height});
+    required this.height,
+  });
 
   @override
   Size get preferredSize => Size.fromHeight(height);
 
   @override
+  State<CustomAppBar> createState() => _CustomAppBarState();
+}
+
+class _CustomAppBarState extends State<CustomAppBar> {
+  final _searchController = TextEditingController();
+  Timer? _debounce;
+
+  List<ShortServiceTypeDto> _categories = [];
+  String? _selectedCategoryId;
+  bool _loadingCats = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.text = homeSearchQuery.value;
+    _selectedCategoryId = homeSelectedCategoryId.value;
+    _fetchCategories();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final dio = Provider.of<AuthService>(context, listen: false).dio;
+      final resp = await dio.get('/v1/service-type');
+      if (resp.statusCode == 200 && resp.data['content'] != null) {
+        final items = (resp.data['content'] as List)
+            .map((e) => ShortServiceTypeDto.fromJson(e))
+            .toList();
+
+        setState(() {
+          _categories = items;
+          _loadingCats = false;
+        });
+
+        // Если категория ещё не выбрана – поставим первую
+        if (homeSelectedCategoryId.value == null && items.isNotEmpty) {
+          _onSelectCategory(items.first.id);
+        }
+      } else {
+        setState(() => _loadingCats = false);
+      }
+    } catch (_) {
+      setState(() => _loadingCats = false);
+    }
+  }
+
+  void _onQueryChanged(String v) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      homeSearchQuery.value = v;
+    });
+  }
+
+  void _onSelectCategory(String? id) {
+    setState(() => _selectedCategoryId = id);
+    homeSelectedCategoryId.value = id;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme
-        .of(context)
-        .colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
     final appState = Provider.of<AppState>(context);
     final locale = appState.locale;
 
@@ -41,33 +110,30 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       color: colorScheme.primary,
       child: Center(
         child: Container(
-          width: contentWidth,
-          height: preferredSize.height,
+          width: widget.contentWidth,
+          height: widget.preferredSize.height,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // logo
               Row(
                 children: [
-                  Text(
-                    'Find',
-                    style: TextStyle(
-                      color: colorScheme.onPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    'Xpert',
-                    style: TextStyle(
-                      color: colorScheme.onPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text('Find',
+                      style: TextStyle(
+                          color: colorScheme.onPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500)),
+                  Text('Xpert',
+                      style: TextStyle(
+                          color: colorScheme.onPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(width: 16),
                 ],
               ),
+
+              // search + category filter в одной капсуле
               Expanded(
                 child: Container(
                   height: 40,
@@ -80,41 +146,75 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                     children: [
                       const Icon(Icons.search),
                       const SizedBox(width: 8),
-                      const Expanded(
-                        child: TextField(
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
+
+                      // категория
+                      if (_loadingCats)
+                        const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                      else
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedCategoryId,
+                            hint: const Text('All'),
+                            isDense: true,
+                            items: _categories
+                                .map((c) => DropdownMenuItem(
+                                      value: c.id,
+                                      child: Text(
+                                        c.displayName,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: _onSelectCategory,
                           ),
                         ),
+
+                      const SizedBox(width: 8),
+                      // разделитель
+                      Container(
+                        width: 1,
+                        height: 20,
+                        color: Colors.black12,
                       ),
+                      const SizedBox(width: 8),
+
+                      // поле поиска
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: const InputDecoration(
+                            hintText: 'Search…',
+                            border: InputBorder.none,
+                            isDense: true,
+                          ),
+                          onChanged: _onQueryChanged,
+                          onSubmitted: (v) => homeSearchQuery.value = v,
+                        ),
+                      ),
+
                       IconButton(
                         icon: Icon(Icons.location_pin,
                             color: colorScheme.primary),
                         onPressed: () async {
                           await fetchLocation();
                         },
-                      )
+                      ),
                     ],
                   ),
                 ),
               ),
+
               const SizedBox(width: 16),
+
+              // language + theme + account
               Row(
                 children: [
-                  // IconButton(
-                  //   icon: SvgPicture.asset(
-                  //     'assets/icons/equalizer.svg',
-                  //     color: colorScheme.onPrimary,
-                  //     width: 24,
-                  //     height: 20,
-                  //   ),
-                  //   onPressed: () {
-                  //     // handle favorites tap
-                  //   },
-                  // ),
                   Stack(alignment: Alignment.center, children: [
                     IconButton(
-                      key: languageKey,
+                      key: widget.languageKey,
                       icon: SvgPicture.asset(
                         'assets/icons/language.svg',
                         colorFilter: ColorFilter.mode(
@@ -125,11 +225,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       onPressed: () {
                         showContextMenuForWidget<Locale>(
                           context: context,
-                          key: languageKey,
-                          items: appState.supportedLocales.map((locale) {
+                          key: widget.languageKey,
+                          items: appState.supportedLocales.map((loc) {
                             return PopupMenuItem(
-                              value: locale,
-                              child: Text(locale.languageCode.toUpperCase()),
+                              value: loc,
+                              child: Text(loc.languageCode.toUpperCase()),
                             );
                           }).toList(),
                         ).then((selectedLocale) {
@@ -148,18 +248,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                             fontSize: 10),
                       ),
                     )
-                  ])
-                ],
-              ),
-              Row(
-                children: [
+                  ]),
                   IconButton(
-                    icon: Icon(isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                    icon: Icon(
+                        widget.isDarkMode ? Icons.dark_mode : Icons.light_mode,
                         color: colorScheme.onPrimary),
-                    onPressed: onThemeToggle,
+                    onPressed: widget.onThemeToggle,
                   ),
                   IconButton(
-                    key: avatarKey,
+                    key: widget.avatarKey,
                     tooltip: 'Account',
                     icon: SvgPicture.asset(
                       'assets/icons/profile.svg',
@@ -170,7 +267,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       width: 24,
                       height: 24,
                     ),
-                    onPressed: () => AccountMenuOverlay.show(context, avatarKey),
+                    onPressed: () =>
+                        AccountMenuOverlay.show(context, widget.avatarKey),
                   ),
                 ],
               ),

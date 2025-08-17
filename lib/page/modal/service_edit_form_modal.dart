@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -93,36 +94,21 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Edit Service',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-
-              // --- Meta: IDs, Status, Type ---
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _infoChip('Service ID', s.id),
-                  _infoChip('User ID', s.userId),
-                  _infoChip('Status', s.status.name),
-                  _infoChip('Category', s.serviceType.displayName),
-                ],
-              ),
-
+              Text('Service', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 24),
-              Divider(),
+              const Divider(),
 
-              // --- Name ---
+              // --- Name (read-only) ---
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: s.name,
                 decoration: const InputDecoration(labelText: 'Name'),
-                enabled: false,            // ← только просмотр
+                enabled: false,
               ),
 
               const SizedBox(height: 16),
 
-              // --- Price (expanded) ---
+              // --- Price (read-only) ---
               Text('Price', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Row(
@@ -177,16 +163,16 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
 
               const SizedBox(height: 16),
 
-              // --- Description ---
+              // --- Description (read-only) ---
               TextFormField(
                 initialValue: s.description,
                 maxLines: 5,
                 decoration: const InputDecoration(labelText: 'Description'),
-                enabled: false,            // ← только просмотр
+                enabled: false,
               ),
 
               const SizedBox(height: 24),
-              Divider(),
+              const Divider(),
 
               // --- Images ---
               const SizedBox(height: 12),
@@ -198,9 +184,9 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
                 const Text("No images available."),
 
               const SizedBox(height: 24),
-              Divider(),
+              const Divider(),
 
-              // --- Address ---
+              // --- Address (read-only) ---
               const SizedBox(height: 12),
               Text('Address', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
@@ -209,7 +195,7 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
               _readonlyField('Street/No.', s.address.street1),
 
               const SizedBox(height: 24),
-              Divider(),
+              const Divider(),
 
               // --- Devices ---
               const SizedBox(height: 12),
@@ -231,9 +217,9 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
                 ),
 
               const SizedBox(height: 24),
-              Divider(),
+              const Divider(),
 
-// --- Attributes ---
+              // --- Attributes (PRETTY) ---
               const SizedBox(height: 12),
               Text('Attributes',
                   style: Theme.of(context).textTheme.titleMedium),
@@ -241,18 +227,7 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
               if (s.attributes.isEmpty)
                 const Text('No attributes.')
               else
-                Column(
-                  children: s.attributes.map((a) {
-                    final title = _prettyLabel(a.property);
-                    final val = (a.value.isNotEmpty) ? a.value : '—';
-                    return ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(title),
-                      subtitle: Text(val),
-                    );
-                  }).toList(),
-                ),
+                _attributesGrid(context, s),
 
               const SizedBox(height: 28),
 
@@ -267,10 +242,10 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
                                 .dio;
                         try {
                           await dio.delete('/v1/service/${s.id}');
-                          if (widget.completer != null && !(widget.completer!.isCompleted)) {
+                          if (widget.completer != null &&
+                              !widget.completer!.isCompleted) {
                             widget.completer!.complete(true);
                           }
-
                           widget.onFinish?.call(true);
                           widget.onClose();
                         } catch (e) {
@@ -293,6 +268,84 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _attributesGrid(BuildContext context, UserServiceFullDto s) {
+    // Авто-перенос по ширине (как grid), карточки одинаковой стилистики
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth;
+        // ширина карточки ~260–320 в зависимости от пространства
+        final itemW = maxW >= 780 ? 320.0 : (maxW >= 520 ? 300.0 : maxW);
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: s.attributes.map((a) {
+            final title = _prettyLabel(a.property);
+            final val = (a.value.isNotEmpty) ? a.value : '—';
+            return SizedBox(
+              width: itemW,
+              child: _attributeCard(context, title, val),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _attributeCard(BuildContext context, String title, String value) {
+    final theme = Theme.of(context);
+    final border = Border.all(color: theme.dividerColor.withOpacity(0.5));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: border,
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 4.0, right: 10),
+            child: Icon(Icons.label_rounded, size: 18),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    )),
+                const SizedBox(height: 4),
+                SelectableText(
+                  value,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Copy value',
+            icon: const Icon(Icons.copy, size: 18),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: value));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Copied')),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -327,7 +380,8 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
     final s1 = raw.replaceAll('_', ' ');
     final s2 = s1.replaceAllMapped(RegExp(r'(?<!^)([A-Z])'), (m) => ' ${m[1]}');
     final out = s2.trim();
-    return out.isEmpty ? 'Attribute' : '${out[0].toUpperCase()}${out.substring(1)}';
+    return out.isEmpty
+        ? 'Attribute'
+        : '${out[0].toUpperCase()}${out.substring(1)}';
   }
-
 }

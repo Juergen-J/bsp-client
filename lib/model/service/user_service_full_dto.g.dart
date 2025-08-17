@@ -17,7 +17,8 @@ UserServiceFullDto _$UserServiceFullDtoFromJson(Map<String, dynamic> json) =>
               ?.map((e) => ShortDeviceDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      price: (json['price'] as num?)?.toDouble(),
+      price: PriceDto.fromJson(json['price'] as Map<String, dynamic>),
+      userId: json['userId'] as String,
       attributes: (json['attributes'] as List<dynamic>)
           .map((e) => ServiceAttributeDto.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -37,6 +38,7 @@ Map<String, dynamic> _$UserServiceFullDtoToJson(UserServiceFullDto instance) =>
       'description': instance.description,
       'devices': instance.devices,
       'price': instance.price,
+      'userId': instance.userId,
       'attributes': instance.attributes,
       'attachments': instance.attachments,
       'address': instance.address,

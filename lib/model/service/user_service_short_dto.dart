@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/model/service/price_dto.dart';
 import 'package:berlin_service_portal/model/service/short_service_type_dto.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -15,7 +16,7 @@ class UserServiceShortDto {
 
   final String description;
 
-  final double? price;
+  final PriceDto price;
 
   final List<AttachmentDto> attachments;
 

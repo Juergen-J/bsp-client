@@ -7,14 +7,14 @@ part of 'price_dto.dart';
 // **************************************************************************
 
 PriceDto _$PriceDtoFromJson(Map<String, dynamic> json) => PriceDto(
-      (json['amount'] as num).toDouble(),
-      json['currencyCode'] as String,
-      json['currencyName'] as String,
-      json['negotiable'] as bool,
+      PriceDto._amountFromJson(json['amount']),
+      json['currencyCode'] as String? ?? 'EUR',
+      json['currencyName'] as String? ?? 'Euro',
+      json['negotiable'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$PriceDtoToJson(PriceDto instance) => <String, dynamic>{
-      'amount': instance.amount,
+      'amount': PriceDto._amountToJson(instance.amount),
       'currencyCode': instance.currencyCode,
       'currencyName': instance.currencyName,
       'negotiable': instance.negotiable,

@@ -1,11 +1,8 @@
+import 'package:berlin_service_portal/model/service/price_dto.dart';
 import 'package:berlin_service_portal/model/service/service_attribute_dto.dart';
-import 'package:berlin_service_portal/model/service/short_service_type_dto.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import '../address_dto.dart';
-import '../attachment/attachment_dto.dart';
-import '../device/short_device_dto.dart';
-import '../element_status.dart';
 
 part 'new_user_service_dto.g.dart';
 
@@ -21,7 +18,7 @@ class NewUserServiceDto {
 
   List<String> devices;
 
-  final double? price;
+  final PriceDto price;
 
   List<ServiceAttributeDto> attributes;
 

@@ -13,7 +13,7 @@ UserServiceShortDto _$UserServiceShortDtoFromJson(Map<String, dynamic> json) =>
           json['serviceType'] as Map<String, dynamic>),
       name: json['name'] as String,
       description: json['description'] as String,
-      price: (json['price'] as num?)?.toDouble(),
+      price: PriceDto.fromJson(json['price'] as Map<String, dynamic>),
       attachments: (json['attachments'] as List<dynamic>?)
               ?.map((e) => AttachmentDto.fromJson(e as Map<String, dynamic>))
               .toList() ??

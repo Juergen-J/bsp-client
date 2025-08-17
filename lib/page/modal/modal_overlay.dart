@@ -82,16 +82,24 @@ class ModalOverlay extends StatelessWidget {
           },
         );
       case ModalType.serviceEditForm:
-        final data = modalManager.data;
-        if (data is String && data.isNotEmpty) {
+        final data = modalManager.data as Map?;
+        final serviceId = data?['serviceId'] as String? ?? '';
+        final completer = data?['completer'] as Completer<bool>?;
+        if (serviceId.isNotEmpty) {
           content = ServiceEditFormModal(
             onClose: () {
               modalManager.close();
+              if (completer != null && !completer.isCompleted) {
+                completer.complete(false);
+              }
             },
             isMobile: isMobile,
-            serviceId: data,
+            serviceId: serviceId,
             onFinish: (bool success) {
               modalManager.close();
+              if (completer != null && !completer.isCompleted) {
+                completer.complete(success);
+              }
             },
           );
         } else {

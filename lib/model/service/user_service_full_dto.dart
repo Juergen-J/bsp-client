@@ -1,3 +1,4 @@
+import 'package:berlin_service_portal/model/service/price_dto.dart';
 import 'package:berlin_service_portal/model/service/service_attribute_dto.dart';
 import 'package:berlin_service_portal/model/service/short_service_type_dto.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -15,13 +16,15 @@ class UserServiceFullDto {
 
   final ShortServiceTypeDto serviceType;
 
-  final String name;
+   final String name;
 
-  final String description;
+   final String description;
 
   final List<ShortDeviceDto> devices;
 
-  final double? price;
+  final PriceDto price;
+
+  final String userId;
 
   final List<ServiceAttributeDto> attributes;
 
@@ -38,6 +41,7 @@ class UserServiceFullDto {
     required this.description,
     this.devices = const [],
     required this.price,
+    required this.userId,
     required this.attributes,
     this.attachments = const [],
     required this.address,

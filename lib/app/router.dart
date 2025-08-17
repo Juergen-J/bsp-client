@@ -21,6 +21,8 @@ import 'app_state.dart';
 final ValueNotifier<bool> isMessagesWindowOpen = ValueNotifier(false);
 final GlobalKey _avatarKey = GlobalKey();
 final GlobalKey _languageKey = GlobalKey();
+final ValueNotifier<String> homeSearchQuery = ValueNotifier<String>('');
+final ValueNotifier<String?> homeSelectedCategoryId = ValueNotifier(null);
 
 final GoRouter router = GoRouter(
   initialLocation: '/home',

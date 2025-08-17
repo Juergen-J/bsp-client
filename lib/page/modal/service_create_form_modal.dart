@@ -11,6 +11,7 @@ import '../../model/device/short_device_dto.dart';
 import '../../model/service/service_attribute_dto.dart';
 import '../../model/service/short_service_type_dto.dart';
 import '../../model/service/new_user_service_dto.dart';
+import '../../model/service/price_dto.dart'; // ← NEW
 import '../../service/auth_service.dart';
 import '../../widgets/image_upload_widget.dart';
 import '../modal/base_modal_wrapper.dart';
@@ -36,9 +37,15 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
 
   String name = '';
   String description = '';
-  double price = 0;
+
+  // --- PRICE (PriceDto) ---
+  String priceAmount = ''; // хранится как строка для точности
+  String currencyCode = 'EUR';
+  String currencyName = 'Euro';
+  bool negotiable = false;
+
   AddressDto address = AddressDto();
-  List<ServiceAttributeDto> attributes = [];
+  List<ServiceAttributeDto> attributes = []; // UI-хук оставлен ниже (TODO)
   List<ShortServiceTypeDto> serviceTypes = [];
   ShortServiceTypeDto? selectedType;
 
@@ -95,17 +102,21 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Add Service',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Add Service',
+                    style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 24),
+
+                // NAME
                 TextFormField(
                   initialValue: name,
                   decoration: const InputDecoration(labelText: 'Name'),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Enter name' : null,
                   onChanged: (v) => name = v,
                 ),
                 const SizedBox(height: 16),
+
+                // CATEGORY
                 DropdownButtonFormField<ShortServiceTypeDto>(
                   value: selectedType,
                   items: serviceTypes.map((type) {
@@ -116,22 +127,73 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                   }).toList(),
                   onChanged: (v) => setState(() => selectedType = v),
                   decoration: const InputDecoration(labelText: 'Category'),
+                  validator: (v) => v == null ? 'Select category' : null,
                 ),
                 const SizedBox(height: 16),
+
+                // --- PRICE (PriceDto fields) ---
+                Text('Price', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
                 TextFormField(
-                  initialValue: price != 0 ? price.toString() : '',
-                  decoration: const InputDecoration(labelText: 'Price (€)'),
-                  keyboardType: TextInputType.number,
-                  onChanged: (v) => price = double.tryParse(v) ?? 0,
+                  initialValue: priceAmount,
+                  decoration:
+                      const InputDecoration(labelText: 'Amount (e.g. 12.34)'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true, signed: false),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter amount';
+                    final normalized = v.replaceAll(',', '.');
+                    final ok =
+                        RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(normalized);
+                    return ok ? null : 'Invalid amount format';
+                  },
+                  onChanged: (v) => priceAmount = v,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: currencyCode,
+                        decoration:
+                            const InputDecoration(labelText: 'Currency code'),
+                        onChanged: (v) => currencyCode = v.toUpperCase(),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: currencyName,
+                        decoration:
+                            const InputDecoration(labelText: 'Currency name'),
+                        onChanged: (v) => currencyName = v,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  value: negotiable,
+                  onChanged: (v) => setState(() => negotiable = v ?? false),
+                  title: const Text('Negotiable'),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
                 ),
                 const SizedBox(height: 16),
+
+                // DESCRIPTION
                 TextFormField(
                   initialValue: description,
                   maxLines: 5,
                   decoration: const InputDecoration(labelText: 'Description'),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Enter description'
+                      : null,
                   onChanged: (v) => description = v,
                 ),
                 const SizedBox(height: 24),
+
+                // IMAGES
                 Text('Images', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 ImageUploadWidget(
@@ -140,6 +202,8 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                   initialFiles: pickedImages,
                 ),
                 const SizedBox(height: 24),
+
+                // ADDRESS
                 Text('Address', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 _buildAddressField('Postcode', address.postcode?.toString(),
@@ -149,6 +213,8 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                 _buildAddressField(
                     'Street/No.', address.street1, (v) => address.street1 = v),
                 const SizedBox(height: 24),
+
+                // DEVICES
                 if (myDevices.isNotEmpty) ...[
                   Text('Linked devices (optional)',
                       style: Theme.of(context).textTheme.titleMedium),
@@ -167,10 +233,18 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                         });
                       },
                       title: Text(device.name),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
                     );
                   }),
                 ],
+
                 const SizedBox(height: 24),
+
+                // ATTRIBUTES (hook / optional UI)
+                // TODO: добавь свой редактор атрибутов, если нужно.
+                // Сейчас отправится пустой список attributes.
+
                 ElevatedButton(
                   onPressed: () async {
                     if (!_formKey.currentState!.validate()) return;
@@ -178,21 +252,35 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                     final dio =
                         Provider.of<AuthService>(context, listen: false).dio;
 
+                    // Подготовим mainAttachment как имя первого файла (если нужно — замени на id после загрузки)
+                    final mainAttachmentName =
+                        pickedImages.isNotEmpty ? pickedImages.first.name : '';
+
+                    // Нормализуем amount (замена запятой на точку)
+                    final normalizedAmount = priceAmount.replaceAll(',', '.');
+                    final amountNum = num.parse(normalizedAmount);
+
+                    // Собираем PriceDto
+                    final priceDto = PriceDto(
+                      amountNum, // amount: String
+                      currencyCode,
+                      currencyName,
+                      negotiable,
+                    );
+
                     final newService = NewUserServiceDto(
                       serviceTypeId: selectedType!.id,
                       name: name,
                       description: description,
-                      mainAttachment: pickedImages.isNotEmpty
-                          ? pickedImages.first.name
-                          : '',
+                      mainAttachment: mainAttachmentName,
                       devices: selectedDeviceIds,
-                      price: price,
+                      price: priceDto,
                       attributes: attributes,
                       address: address,
                     );
 
+                    // Файлы-вложения
                     final attachments = <MultipartFile>[];
-
                     for (final file in pickedImages) {
                       final bytes = await file.readAsBytes();
                       attachments.add(
@@ -218,6 +306,7 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                       widget.onFinish?.call(true);
                       widget.onClose();
                     } catch (e) {
+                      // ignore: avoid_print
                       print('Error creating service: $e');
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(

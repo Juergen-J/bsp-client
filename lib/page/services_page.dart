@@ -83,7 +83,10 @@ class _ServicesPageState extends State<ServicesPage> {
                 final resultCompleter = Completer<bool>();
                 modalManager.show(
                   ModalType.serviceEditForm,
-                  data: service.id,
+                  data: {
+                    'serviceId': service.id,
+                    'completer': resultCompleter,
+                  },
                 );
 
                 final result = await resultCompleter.future;

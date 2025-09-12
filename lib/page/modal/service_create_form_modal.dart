@@ -5,11 +5,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../model/address_dto.dart';
 import '../../model/device/short_device_dto.dart';
 import '../../model/postal_suggestion_dto.dart';
+import '../../model/service/currency_dto.dart';
 import '../../model/service/new_user_service_dto.dart';
 import '../../model/service/price_dto.dart';
 import '../../model/service/service_attribute_dto.dart';
@@ -46,6 +48,12 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   String currencyName = 'Euro';
   bool negotiable = false;
 
+  // Currency
+  List<CurrencyDto> currencies = [];
+  CurrencyDto? selectedCurrency;
+  bool _isLoadingCurrencies = false;
+
+  // Address
   AddressDto address = AddressDto();
   List<ShortServiceTypeDto> serviceTypes = [];
   ShortServiceTypeDto? selectedType;
@@ -101,18 +109,17 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
     _stateCtrl.text = address.state ?? '';
 
     _postcodeCtrl.addListener(_onZipChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCurrencies());
   }
 
   @override
   void dispose() {
-    // 1) Слушатели/таймеры
     _postcodeCtrl.removeListener(_onZipChanged);
     _zipDebounce?.cancel();
 
-    // 2) Убираем оверлей синхронно
     _removeOverlayNow();
 
-    // 3) Контроллеры/фокусы
     for (final c in _attrPropCtrls) c.dispose();
     for (final c in _attrValCtrls) c.dispose();
 
@@ -124,7 +131,6 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
     _postcodeFocus.dispose();
     _street1Focus.dispose();
 
-    // 4) ОБЯЗАТЕЛЬНО
     super.dispose();
   }
 
@@ -193,6 +199,46 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
       _hideZipOverlay();
     } finally {
       if (mounted) setState(() => _isLoadingZip = false);
+    }
+  }
+
+  Future<void> _loadCurrencies() async {
+    setState(() => _isLoadingCurrencies = true);
+    try {
+      final dio = Provider.of<AuthService>(context, listen: false).dio;
+      final locale = Localizations.localeOf(context).toLanguageTag();
+      final resp =
+          await dio.get('/v1/currency', queryParameters: {'locale': locale});
+
+      List<CurrencyDto> list = [];
+      if (resp.statusCode == 200 && resp.data is List) {
+        list = (resp.data as List).map((e) => CurrencyDto.fromJson(e)).toList();
+      }
+
+      if (list.isEmpty) {
+        list = [CurrencyDto(code: 'EUR', name: 'Euro')];
+      }
+
+      final current = list.firstWhere(
+        (c) => c.code == currencyCode,
+        orElse: () => list.first,
+      );
+
+      setState(() {
+        currencies = list;
+        selectedCurrency = current;
+        currencyCode = current.code;
+        currencyName = current.name;
+      });
+    } catch (e) {
+      setState(() {
+        currencies = [CurrencyDto(code: 'EUR', name: 'Euro')];
+        selectedCurrency = currencies.first;
+        currencyCode = 'EUR';
+        currencyName = 'Euro';
+      });
+    } finally {
+      if (mounted) setState(() => _isLoadingCurrencies = false);
     }
   }
 
@@ -271,39 +317,61 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                 // PRICE
                 Text('Price', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                TextFormField(
-                  initialValue: priceAmount,
-                  decoration:
-                      const InputDecoration(labelText: 'Amount (e.g. 12.34)'),
-                  keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true, signed: false),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Enter amount';
-                    final normalized = v.replaceAll(',', '.');
-                    final ok =
-                        RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(normalized);
-                    return ok ? null : 'Invalid amount format';
-                  },
-                  onChanged: (v) => priceAmount = v,
-                ),
-                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
                       child: TextFormField(
-                        initialValue: currencyCode,
-                        decoration:
-                            const InputDecoration(labelText: 'Currency code'),
-                        onChanged: (v) => currencyCode = v.toUpperCase(),
+                        initialValue: priceAmount,
+                        decoration: const InputDecoration(
+                            labelText: 'Amount (e.g. 12.34)'),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true, signed: false),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty)
+                            return 'Enter amount';
+                          final normalized = v.replaceAll(',', '.');
+                          final ok =
+                              RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(normalized);
+                          return ok ? null : 'Invalid amount format';
+                        },
+                        onChanged: (v) => priceAmount = v,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: TextFormField(
-                        initialValue: currencyName,
+                      child: DropdownButtonFormField<CurrencyDto>(
+                        value: selectedCurrency,
+                        isExpanded: true,
                         decoration:
-                            const InputDecoration(labelText: 'Currency name'),
-                        onChanged: (v) => currencyName = v,
+                            const InputDecoration(labelText: 'Currency'),
+                        items: currencies.map((c) {
+                          final symbol =
+                              NumberFormat.simpleCurrency(name: c.code)
+                                  .currencySymbol;
+                          return DropdownMenuItem(
+                            value: c,
+                            child: Text('$symbol ${c.name} — ${c.code}'),
+                          );
+                        }).toList(),
+                        selectedItemBuilder: (_) => currencies.map((c) {
+                          final symbol =
+                              NumberFormat.simpleCurrency(name: c.code)
+                                  .currencySymbol;
+                          return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(symbol));
+                        }).toList(),
+                        onChanged: _isLoadingCurrencies
+                            ? null
+                            : (c) {
+                                if (c == null) return;
+                                setState(() {
+                                  selectedCurrency = c;
+                                  currencyCode = c.code;
+                                  currencyName = c.name;
+                                });
+                              },
+                        validator: (v) => v == null ? 'Select currency' : null,
                       ),
                     ),
                   ],
@@ -316,7 +384,6 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
-                const SizedBox(height: 16),
 
                 // DESCRIPTION
                 TextFormField(
@@ -344,9 +411,7 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                 Text('Address', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
 
-                // ZIP + подсказки
                 SizedBox(
-                  // контейнер c ключом, ширина которого = ширине поля
                   key: _zipTargetKey,
                   child: CompositedTransformTarget(
                     link: _zipFieldLink,
@@ -561,15 +626,6 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
     );
   }
 
-  Widget _buildAddressField(
-      String label, String? initial, void Function(String) onChanged) {
-    return TextFormField(
-      initialValue: initial ?? '',
-      decoration: InputDecoration(labelText: label),
-      onChanged: onChanged,
-    );
-  }
-
   void _removeOverlayNow() {
     _zipOverlay?.remove();
     _zipOverlay = null;
@@ -577,13 +633,11 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   }
 
   void _onZipChanged() {
-    if (_suppressZipListener)
-      return; // ⬅️ не реагируем на программные изменения
+    if (_suppressZipListener) return;
 
     final v = _postcodeCtrl.text.trim();
     address.postcode = int.tryParse(v);
 
-    // если ввод совпадает с только что применённым ZIP — ничего не делаем
     if (_lastAppliedZip != null && v == _lastAppliedZip) {
       _hideZipOverlay();
       return;
@@ -612,14 +666,12 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
       builder: (context) {
         return Stack(
           children: [
-            // Фон для закрытия по клику вне области
             Positioned.fill(
               child: GestureDetector(
                 onTap: _hideZipOverlay,
                 child: Container(color: Colors.transparent),
               ),
             ),
-            // Область с подсказками
             Positioned(
               child: CompositedTransformFollower(
                 link: _zipFieldLink,
@@ -632,9 +684,7 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                     width: 420,
                     height: 260,
                     child: MouseRegion(
-                      // Важно: обеспечиваем получение событий мыши
                       child: GestureDetector(
-                        // Предотвращаем передачу кликов родителю
                         onTap: () {},
                         child: _buildZipSuggestionList(),
                       ),
@@ -700,7 +750,6 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
 
     _hideZipOverlay();
 
-    // ⬇️ временно глушим listener, чтобы не триггерить повторный fetch
     _suppressZipListener = true;
     _lastAppliedZip = postcode;
 
@@ -714,14 +763,10 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
       _stateCtrl.text = state;
     });
 
-    // снова включим реакцию на ручной ввод на следующем кадре
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _suppressZipListener = false;
     });
-
-    // (см. пункт 2) — фокус больше не прыгает на street
-    // FocusScope.of(context).requestFocus(_street1Focus);
   }
 
   void _insertOverlaySafely(OverlayEntry entry) {

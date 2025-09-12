@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../model/address_dto.dart';
 import '../../model/device/short_device_dto.dart';
+import '../../model/postal_suggestion_dto.dart';
 import '../../model/service/new_user_service_dto.dart';
 import '../../model/service/price_dto.dart';
 import '../../model/service/service_attribute_dto.dart';
@@ -57,18 +58,54 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   final List<TextEditingController> _attrPropCtrls = [];
   final List<TextEditingController> _attrValCtrls = [];
 
+  // Address controllers
+  final _postcodeCtrl = TextEditingController();
+  final _cityCtrl = TextEditingController();
+  final _stateCtrl = TextEditingController();
+  final _street1Ctrl = TextEditingController();
+
+  final _postcodeFocus = FocusNode();
+  final _street1Focus = FocusNode();
+
+  // ZIP suggestions
+  final LayerLink _zipFieldLink = LayerLink();
+  OverlayEntry? _zipOverlay;
+  List<PostalSuggestionDto> _zipSuggestions = [];
+  bool _isLoadingZip = false;
+  Timer? _zipDebounce;
+  bool _zipOverlayVisible = false;
+
   @override
   void initState() {
     super.initState();
     _loadServiceTypes();
     _loadMyDevices();
+
+    _postcodeCtrl.text = address.postcode?.toString() ?? '';
+    _cityCtrl.text = address.city ?? '';
+    _stateCtrl.text = address.state ?? '';
+
+    _postcodeCtrl.addListener(_onZipChanged);
+    _postcodeFocus.addListener(() {
+      if (!_postcodeFocus.hasFocus) _removeOverlaySafely();
+      ;
+    });
   }
 
   @override
   void dispose() {
     for (final c in _attrPropCtrls) c.dispose();
     for (final c in _attrValCtrls) c.dispose();
-    super.dispose();
+
+    _postcodeCtrl.removeListener(_onZipChanged);
+    _postcodeCtrl.dispose();
+    _cityCtrl.dispose();
+    _stateCtrl.dispose();
+    _street1Ctrl.dispose();
+    _postcodeFocus.dispose();
+    _zipDebounce?.cancel();
+    _street1Focus.dispose();
+    _removeOverlaySafely();
   }
 
   Future<void> _loadServiceTypes() async {
@@ -95,6 +132,46 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
             .map((e) => ShortDeviceDto.fromJson(e))
             .toList();
       });
+    }
+  }
+
+  Future<void> _fetchZipSuggestions(String zip) async {
+    try {
+      setState(() => _isLoadingZip = true);
+      final dio = Provider.of<AuthService>(context, listen: false).dio;
+      final resp = await dio
+          .get('/v1/postal-codes/suggest', queryParameters: {'zip': zip});
+
+      List<PostalSuggestionDto> list = [];
+      if (resp.statusCode == 200 && resp.data is List) {
+        list = (resp.data as List)
+            .map((e) => PostalSuggestionDto.fromJson(e))
+            .toList();
+      }
+
+      _zipSuggestions = list;
+
+      if (_zipSuggestions.length == 1 &&
+          (_zipSuggestions.first.postcode ?? '').trim() == zip.trim()) {
+        _applyZipSuggestion(_zipSuggestions.first);
+        _hideZipOverlay();
+        return;
+      }
+
+      if (_zipSuggestions.isNotEmpty) {
+        if (_zipOverlay == null) {
+          _showZipOverlay();
+        } else {
+          _zipOverlay!.markNeedsBuild();
+        }
+      } else {
+        _hideZipOverlay();
+      }
+    } catch (_) {
+      _zipSuggestions = [];
+      _hideZipOverlay();
+    } finally {
+      if (mounted) setState(() => _isLoadingZip = false);
     }
   }
 
@@ -245,13 +322,54 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                 // ADDRESS
                 Text('Address', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                _buildAddressField('Postcode', address.postcode?.toString(),
-                    (v) => address.postcode = int.tryParse(v)),
-                _buildAddressField(
-                    'City', address.city, (v) => address.city = v),
-                _buildAddressField(
-                    'Street/No.', address.street1, (v) => address.street1 = v),
-                const SizedBox(height: 24),
+
+                // ZIP + подсказки
+                CompositedTransformTarget(
+                  link: _zipFieldLink,
+                  child: TextFormField(
+                    controller: _postcodeCtrl,
+                    focusNode: _postcodeFocus,
+                    decoration: const InputDecoration(
+                      labelText: 'Postcode',
+                      hintText: 'Напр., 12305',
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(signed: false),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty)
+                        return 'Введите индекс';
+                      if (v.trim().length < 3) return 'Минимум 3 символа';
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _cityCtrl,
+                  decoration: const InputDecoration(labelText: 'City'),
+                  onChanged: (v) => address.city = v,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Введите город' : null,
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _stateCtrl,
+                  decoration: const InputDecoration(labelText: 'State/Region'),
+                  onChanged: (v) => address.state = v,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Введите регион/штат'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _street1Ctrl,
+                  focusNode: _street1Focus,
+                  decoration: const InputDecoration(labelText: 'Street/No.'),
+                  onChanged: (v) => address.street1 = v,
+                ),
 
                 // DEVICES
                 if (myDevices.isNotEmpty) ...[
@@ -351,6 +469,11 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                     final normalizedAmount = priceAmount.replaceAll(',', '.');
                     final amountNum = num.parse(normalizedAmount);
 
+                    address.postcode = int.tryParse(_postcodeCtrl.text.trim());
+                    address.city = _cityCtrl.text.trim();
+                    address.state = _stateCtrl.text.trim();
+                    address.street1 = _street1Ctrl.text.trim();
+
                     final priceDto = PriceDto(
                       amountNum,
                       currencyCode,
@@ -423,5 +546,139 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
       decoration: InputDecoration(labelText: label),
       onChanged: onChanged,
     );
+  }
+
+  void _onZipChanged() {
+    final v = _postcodeCtrl.text.trim();
+    address.postcode = int.tryParse(v);
+
+    _zipDebounce?.cancel();
+
+    if (v.length < 3) {
+      _zipSuggestions = [];
+      _hideZipOverlay();
+      setState(() {});
+      return;
+    }
+    _zipDebounce = Timer(const Duration(milliseconds: 350), () {
+      _fetchZipSuggestions(v);
+    });
+  }
+
+  void _showZipOverlay() {
+    if (_zipOverlay != null) {
+      // Уже открыт — просто перерисовать (список мог измениться)
+      _zipOverlay!.markNeedsBuild();
+      return;
+    }
+
+    _zipOverlay = OverlayEntry(
+      builder: (context) {
+        return Stack(
+          children: [
+            // НИЗ: клики вне списка — закрывают оверлей
+            Positioned.fill(
+              child: ModalBarrier(
+                dismissible: true,
+                color: Colors.transparent,
+                onDismiss: _hideZipOverlay,
+              ),
+            ),
+            // ВЕРХ: сам попап со списком, получает все клики по пунктам
+            CompositedTransformFollower(
+              link: _zipFieldLink,
+              showWhenUnlinked: false,
+              offset: const Offset(0, 48),
+              child: Material(
+                elevation: 6,
+                borderRadius: BorderRadius.circular(8),
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxWidth: 420, maxHeight: 260),
+                  child: _buildZipSuggestionList(),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    _insertOverlaySafely(_zipOverlay!);
+  }
+
+  void _hideZipOverlay() {
+    _removeOverlaySafely();
+  }
+
+  Widget _buildZipSuggestionList() {
+    if (_isLoadingZip) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+            height: 24, child: Center(child: CircularProgressIndicator())),
+      );
+    }
+    if (_zipSuggestions.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: Text('Нет подсказок'),
+      );
+    }
+    return ListView.separated(
+      padding: EdgeInsets.zero,
+      itemCount: _zipSuggestions.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) {
+        final s = _zipSuggestions[i];
+        return ListTile(
+          dense: true,
+          onTap: () => _applyZipSuggestion(s),
+          title: Text('${s.postcode ?? ""}  •  ${s.city ?? ""}'),
+          subtitle: Text(
+              '${s.countryCode ?? ""} • ${s.countryName ?? ""}${(s.admin1 ?? "").isNotEmpty ? " • ${s.admin1}" : ""}'),
+        );
+      },
+    );
+  }
+
+  void _applyZipSuggestion(PostalSuggestionDto s) {
+    final postcode = (s.postcode ?? '').trim();
+    final city = (s.city ?? '').trim();
+    final state = (s.admin1 ?? '').trim();
+
+    // сразу закрываем оверлей
+    _hideZipOverlay();
+
+    setState(() {
+      // обновляем AddressDto
+      address.postcode = int.tryParse(postcode);
+      address.city = city;
+      address.state = state.isNotEmpty ? state : null;
+
+      // и текстовые поля
+      _postcodeCtrl.text = postcode;
+      _cityCtrl.text = city;
+      _stateCtrl.text = state;
+    });
+
+    FocusScope.of(context).requestFocus(_street1Focus);
+  }
+
+  void _insertOverlaySafely(OverlayEntry entry) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _zipOverlay == entry && !_zipOverlayVisible) {
+        Overlay.of(context)?.insert(entry);
+        _zipOverlayVisible = true;
+      }
+    });
+  }
+
+  void _removeOverlaySafely() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _zipOverlay?.remove();
+      _zipOverlay = null;
+      _zipOverlayVisible = false;
+    });
   }
 }

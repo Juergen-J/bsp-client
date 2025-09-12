@@ -67,6 +67,19 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   final _postcodeFocus = FocusNode();
   final _street1Focus = FocusNode();
 
+  final _zipTargetKey = GlobalKey();
+
+  Size get _zipTargetSize {
+    final ctx = _zipTargetKey.currentContext;
+    if (ctx == null) return const Size(420, 0);
+    final box = ctx.findRenderObject() as RenderBox;
+    return box.size;
+  }
+
+  double get _zipTargetHeight => _zipTargetSize.height;
+
+  double get _zipTargetWidth => _zipTargetSize.width;
+
   // ZIP suggestions
   final LayerLink _zipFieldLink = LayerLink();
   OverlayEntry? _zipOverlay;
@@ -74,6 +87,8 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   bool _isLoadingZip = false;
   Timer? _zipDebounce;
   bool _zipOverlayVisible = false;
+  bool _suppressZipListener = false;
+  String? _lastAppliedZip;
 
   @override
   void initState() {
@@ -86,10 +101,6 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
     _stateCtrl.text = address.state ?? '';
 
     _postcodeCtrl.addListener(_onZipChanged);
-    _postcodeFocus.addListener(() {
-      if (!_postcodeFocus.hasFocus) _removeOverlaySafely();
-      ;
-    });
   }
 
   @override
@@ -153,6 +164,7 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
 
       if (_zipSuggestions.length == 1 &&
           (_zipSuggestions.first.postcode ?? '').trim() == zip.trim()) {
+        print("call _fetchZipSuggestions");
         _applyZipSuggestion(_zipSuggestions.first);
         _hideZipOverlay();
         return;
@@ -324,23 +336,24 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                 const SizedBox(height: 8),
 
                 // ZIP + подсказки
-                CompositedTransformTarget(
-                  link: _zipFieldLink,
-                  child: TextFormField(
-                    controller: _postcodeCtrl,
-                    focusNode: _postcodeFocus,
-                    decoration: const InputDecoration(
-                      labelText: 'Postcode',
-                      hintText: 'Напр., 12305',
+                SizedBox(
+                  // контейнер c ключом, ширина которого = ширине поля
+                  key: _zipTargetKey,
+                  child: CompositedTransformTarget(
+                    link: _zipFieldLink,
+                    child: TextFormField(
+                      controller: _postcodeCtrl,
+                      focusNode: _postcodeFocus,
+                      decoration: const InputDecoration(
+                        labelText: 'Postcode',
+                        hintText: 'Напр., 12305',
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(signed: false),
+                      validator: (v) {
+                        /* ... */
+                      },
                     ),
-                    keyboardType:
-                        const TextInputType.numberWithOptions(signed: false),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty)
-                        return 'Введите индекс';
-                      if (v.trim().length < 3) return 'Минимум 3 символа';
-                      return null;
-                    },
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -549,8 +562,17 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   }
 
   void _onZipChanged() {
+    if (_suppressZipListener)
+      return; // ⬅️ не реагируем на программные изменения
+
     final v = _postcodeCtrl.text.trim();
     address.postcode = int.tryParse(v);
+
+    // если ввод совпадает с только что применённым ZIP — ничего не делаем
+    if (_lastAppliedZip != null && v == _lastAppliedZip) {
+      _hideZipOverlay();
+      return;
+    }
 
     _zipDebounce?.cancel();
 
@@ -567,7 +589,6 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
 
   void _showZipOverlay() {
     if (_zipOverlay != null) {
-      // Уже открыт — просто перерисовать (список мог измениться)
       _zipOverlay!.markNeedsBuild();
       return;
     }
@@ -576,26 +597,34 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
       builder: (context) {
         return Stack(
           children: [
-            // НИЗ: клики вне списка — закрывают оверлей
+            // Фон для закрытия по клику вне области
             Positioned.fill(
-              child: ModalBarrier(
-                dismissible: true,
-                color: Colors.transparent,
-                onDismiss: _hideZipOverlay,
+              child: GestureDetector(
+                onTap: _hideZipOverlay,
+                child: Container(color: Colors.transparent),
               ),
             ),
-            // ВЕРХ: сам попап со списком, получает все клики по пунктам
-            CompositedTransformFollower(
-              link: _zipFieldLink,
-              showWhenUnlinked: false,
-              offset: const Offset(0, 48),
-              child: Material(
-                elevation: 6,
-                borderRadius: BorderRadius.circular(8),
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxWidth: 420, maxHeight: 260),
-                  child: _buildZipSuggestionList(),
+            // Область с подсказками
+            Positioned(
+              child: CompositedTransformFollower(
+                link: _zipFieldLink,
+                showWhenUnlinked: false,
+                offset: const Offset(0, 48),
+                child: Material(
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 420,
+                    height: 260,
+                    child: MouseRegion(
+                      // Важно: обеспечиваем получение событий мыши
+                      child: GestureDetector(
+                        // Предотвращаем передачу кликов родителю
+                        onTap: () {},
+                        child: _buildZipSuggestionList(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -608,6 +637,7 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
   }
 
   void _hideZipOverlay() {
+    debugPrint('overlay HIDE');
     _removeOverlaySafely();
   }
 
@@ -615,8 +645,7 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
     if (_isLoadingZip) {
       return const Padding(
         padding: EdgeInsets.all(12),
-        child: SizedBox(
-            height: 24, child: Center(child: CircularProgressIndicator())),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
     if (_zipSuggestions.isEmpty) {
@@ -631,12 +660,17 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (_, i) {
         final s = _zipSuggestions[i];
-        return ListTile(
-          dense: true,
-          onTap: () => _applyZipSuggestion(s),
-          title: Text('${s.postcode ?? ""}  •  ${s.city ?? ""}'),
-          subtitle: Text(
-              '${s.countryCode ?? ""} • ${s.countryName ?? ""}${(s.admin1 ?? "").isNotEmpty ? " • ${s.admin1}" : ""}'),
+        return InkWell(
+          onTap: () {
+            print("click on item $i");
+            _applyZipSuggestion(s);
+          },
+          child: ListTile(
+            dense: true,
+            title: Text('${s.postcode ?? ""}  •  ${s.city ?? ""}'),
+            subtitle: Text(
+                '${s.countryCode ?? ""} • ${s.countryName ?? ""}${(s.admin1 ?? "").isNotEmpty ? " • ${s.admin1}" : ""}'),
+          ),
         );
       },
     );
@@ -647,22 +681,32 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
     final city = (s.city ?? '').trim();
     final state = (s.admin1 ?? '').trim();
 
-    // сразу закрываем оверлей
+    debugPrint('applyZip: postcode=$postcode city=$city state=$state');
+
     _hideZipOverlay();
 
+    // ⬇️ временно глушим listener, чтобы не триггерить повторный fetch
+    _suppressZipListener = true;
+    _lastAppliedZip = postcode;
+
     setState(() {
-      // обновляем AddressDto
       address.postcode = int.tryParse(postcode);
       address.city = city;
       address.state = state.isNotEmpty ? state : null;
 
-      // и текстовые поля
       _postcodeCtrl.text = postcode;
       _cityCtrl.text = city;
       _stateCtrl.text = state;
     });
 
-    FocusScope.of(context).requestFocus(_street1Focus);
+    // снова включим реакцию на ручной ввод на следующем кадре
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _suppressZipListener = false;
+    });
+
+    // (см. пункт 2) — фокус больше не прыгает на street
+    // FocusScope.of(context).requestFocus(_street1Focus);
   }
 
   void _insertOverlaySafely(OverlayEntry entry) {

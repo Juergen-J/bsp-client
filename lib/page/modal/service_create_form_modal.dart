@@ -105,18 +105,27 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
 
   @override
   void dispose() {
+    // 1) Слушатели/таймеры
+    _postcodeCtrl.removeListener(_onZipChanged);
+    _zipDebounce?.cancel();
+
+    // 2) Убираем оверлей синхронно
+    _removeOverlayNow();
+
+    // 3) Контроллеры/фокусы
     for (final c in _attrPropCtrls) c.dispose();
     for (final c in _attrValCtrls) c.dispose();
 
-    _postcodeCtrl.removeListener(_onZipChanged);
     _postcodeCtrl.dispose();
     _cityCtrl.dispose();
     _stateCtrl.dispose();
     _street1Ctrl.dispose();
+
     _postcodeFocus.dispose();
-    _zipDebounce?.cancel();
     _street1Focus.dispose();
-    _removeOverlaySafely();
+
+    // 4) ОБЯЗАТЕЛЬНО
+    super.dispose();
   }
 
   Future<void> _loadServiceTypes() async {
@@ -559,6 +568,12 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
       decoration: InputDecoration(labelText: label),
       onChanged: onChanged,
     );
+  }
+
+  void _removeOverlayNow() {
+    _zipOverlay?.remove();
+    _zipOverlay = null;
+    _zipOverlayVisible = false;
   }
 
   void _onZipChanged() {

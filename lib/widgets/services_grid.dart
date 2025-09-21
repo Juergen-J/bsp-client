@@ -1,15 +1,17 @@
-import 'package:berlin_service_portal/widgets/cards/service_short_card.dart';
 import 'package:flutter/material.dart';
 import '../../model/service/user_service_short_dto.dart';
+import 'cards/service_short_card.dart';
 
 class ServicesGrid extends StatelessWidget {
   final List<UserServiceShortDto> services;
   final void Function(UserServiceShortDto)? onTap;
+  final void Function(UserServiceShortDto)? onMessage;
 
   const ServicesGrid({
     super.key,
     required this.services,
     this.onTap,
+    this.onMessage,
   });
 
   @override
@@ -19,6 +21,10 @@ class ServicesGrid extends StatelessWidget {
         final isTwoCols = constraints.maxWidth >= 800;
         final crossAxisCount = isTwoCols ? 2 : 1;
 
+        // карточка стала чуть выше — уменьшим aspectRatio,
+        // чтобы было похоже на референс
+        final aspect = isTwoCols ? 4.0 : 4.0;
+
         return GridView.builder(
           primary: false,
           shrinkWrap: true,
@@ -26,15 +32,18 @@ class ServicesGrid extends StatelessWidget {
           itemCount: services.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: isTwoCols ? 2.8 : 2.6,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: aspect,
           ),
           itemBuilder: (context, index) {
-            final service = services[index];
+            final s = services[index];
             return ServiceShortCard(
-              service: service,
-              onTap: onTap != null ? () => onTap!(service) : null,
+              service: s,
+              priceUnit: 'VB',
+              onTap: onTap != null ? () => onTap!(s) : null,
+              onMessage: onMessage != null ? () => onMessage!(s) : null,
+              // tags: ['React','Node.js','TypeScript'], // если хочешь подменить чипы
             );
           },
         );

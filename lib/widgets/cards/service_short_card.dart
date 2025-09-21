@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -10,7 +9,8 @@ class ServiceShortCard extends StatefulWidget {
   final UserServiceShortDto service;
   final VoidCallback? onTap;
   final VoidCallback? onMessage;
-  final List<String>? tags; // опционально: кастомные чипы
+  final VoidCallback? onFavorite;
+  final List<String>? tags;
   final String? priceUnit;
 
   const ServiceShortCard({
@@ -18,6 +18,7 @@ class ServiceShortCard extends StatefulWidget {
     required this.service,
     this.onTap,
     this.onMessage,
+    this.onFavorite,
     this.tags,
     this.priceUnit,
   });
@@ -31,128 +32,100 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final cs = t.colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     final tags = widget.tags ?? [widget.service.serviceType.displayName];
     final priceStr = _formatPrice(widget.service, widget.priceUnit ?? '');
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            // тонкая светлая рамка как на рефе
-            color: cs.outlineVariant.withOpacity(0.6),
-            width: 1,
-          ),
-          // мягкая «воздушная» тень на ховер
-          boxShadow: _hover
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 14,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 6),
-                  )
-                ]
-              : const [],
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(20),
-            splashColor: cs.primary.withOpacity(0.08),
-            highlightColor: Colors.transparent,
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Thumb(service: widget.service), // превью слева
-                  const SizedBox(width: 16),
-                  // центр: заголовок+цена, чипы, описание
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // заголовок + цена справа (одна строка)
-                        Row(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedScale(
+            scale: _hover ? 1.03 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: Material(
+              type: MaterialType.transparency,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                splashColor: colorScheme.primary.withOpacity(0.08),
+                highlightColor: Colors.transparent,
+                onTap: widget.onTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SquareThumb(service: widget.service),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                widget.service.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: t.textTheme.titleMedium?.copyWith(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    widget.service.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.titleLarge,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  priceStr,
+                                  style: theme.textTheme.titleMedium,
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              priceStr,
-                              style: t.textTheme.titleMedium?.copyWith(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
+                            const SizedBox(height: 10),
+                            if (tags.isNotEmpty)
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: tags
+                                    .where((e) => e.trim().isNotEmpty)
+                                    .map((e) => _Tag(text: e))
+                                    .toList(),
                               ),
+                            const SizedBox(height: 10),
+                            Text(
+                              widget.service.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
-
-                        // чипы
-                        if (tags.isNotEmpty)
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: tags
-                                .where((e) => e.trim().isNotEmpty)
-                                .map((e) => _Tag(text: e))
-                                .toList(),
-                          ),
-
-                        const SizedBox(height: 10),
-
-                        // описание
-                        Text(
-                          widget.service.description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: t.textTheme.bodyMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      IconButton(
+                        onPressed: widget.onMessage,
+                        icon: const Icon(Icons.chat_bubble_outline),
+                        color: colorScheme.onSurface,
+                        tooltip: 'Message',
+                        splashRadius: 20,
+                      ),
+                      IconButton(
+                        onPressed: widget.onFavorite,
+                        icon: const Icon(Icons.star_border),
+                        color: colorScheme.onSurface,
+                        tooltip: 'Favorite',
+                        splashRadius: 20,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  // иконка сообщения справа
-                  IconButton(
-                    onPressed: widget.onMessage,
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    color: cs.outline,
-                    // более лёгкий оттенок, как на рефе
-                    tooltip: 'Message',
-                    splashRadius: 20,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
-    );
+        ));
   }
 
   String _formatPrice(UserServiceShortDto s, String unitSuffix) {
@@ -163,13 +136,14 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
   }
 }
 
-class _Thumb extends StatelessWidget {
+class _SquareThumb extends StatelessWidget {
   final UserServiceShortDto service;
 
-  const _Thumb({required this.service});
+  const _SquareThumb({required this.service});
 
   String? _smallId() {
-    final main = service.attachments.where((a) => a.mainAttachment).firstOrNull;
+    final mains = service.attachments.where((a) => a.mainAttachment);
+    final main = mains.isNotEmpty ? mains.first : null;
     if (main?.details is ImageAttachmentDto) {
       return (main!.details as ImageAttachmentDto).smallId;
     }
@@ -181,11 +155,10 @@ class _Thumb extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final id = _smallId();
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: 64, // крупнее, как на рефе
-        height: 64,
+    return AspectRatio(
+      aspectRatio: 1,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
         child: id == null
             ? Container(
                 color: cs.surfaceContainerHighest,
@@ -194,10 +167,12 @@ class _Thumb extends StatelessWidget {
               )
             : FutureBuilder<Widget>(
                 future: Provider.of<ImageService>(context, listen: false)
-                    .getImageWidget(id,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover),
+                    .getImageWidget(
+                  id,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return Container(
@@ -233,19 +208,19 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest, // «таблетка»
+        color: cs.secondary,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: cs.onSecondary,
+        ),
       ),
     );
   }

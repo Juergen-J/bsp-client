@@ -21,9 +21,7 @@ class ServicesGrid extends StatelessWidget {
         final isTwoCols = constraints.maxWidth >= 800;
         final crossAxisCount = isTwoCols ? 2 : 1;
 
-        // карточка стала чуть выше — уменьшим aspectRatio,
-        // чтобы было похоже на референс
-        final aspect = isTwoCols ? 4.0 : 4.0;
+        final aspect = isTwoCols ? 3.0 : 3.0;
 
         return GridView.builder(
           primary: false,
@@ -43,7 +41,7 @@ class ServicesGrid extends StatelessWidget {
               priceUnit: 'VB',
               onTap: onTap != null ? () => onTap!(s) : null,
               onMessage: onMessage != null ? () => onMessage!(s) : null,
-              // tags: ['React','Node.js','TypeScript'], // если хочешь подменить чипы
+              tags: ['React','Node.js','TypeScript'],
             );
           },
         );

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:berlin_service_portal/widgets/services_grid.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,7 +17,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool get _hasAncestorScroll => PrimaryScrollController.of(context) != null;
+  CancelToken? _cancelToken;
+  bool _mounted = true;
+
+  void _safeSetState(VoidCallback fn) {
+    if (!_mounted) return;
+    if (mounted) setState(fn);
+  }
 
   final List<UserServiceShortDto> _results = [];
   bool _loading = false;
@@ -48,6 +55,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _mounted = false;
+    _cancelToken?.cancel('dispose');
     homeSearchQuery.removeListener(_searchListener);
     homeSelectedCategoryId.removeListener(_categoryListener);
     _debounce?.cancel();
@@ -63,33 +72,36 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _triggerSearch({bool reset = false}) async {
     final categoryId = homeSelectedCategoryId.value;
-    if (categoryId == null) return; // ждём, пока AppBar подтянет категории
+    if (categoryId == null) return;
+
+    // отменяем предыдущий запрос
+    _cancelToken?.cancel('new-request');
+    _cancelToken = CancelToken();
 
     if (reset) {
-      setState(() {
+      _safeSetState(() {
         _page = 0;
         _last = true;
         _results.clear();
       });
     }
 
-    setState(() {
+    _safeSetState(() {
       _loading = true;
       _error = null;
     });
 
     final dio = Provider.of<AuthService>(context, listen: false).dio;
+
     try {
       final resp = await dio.post(
         '/v1/service/search',
-        queryParameters: {
-          'page': _page,
-          'size': _size,
-        },
+        queryParameters: {'page': _page, 'size': _size},
         data: {
           'serviceTypeId': categoryId,
           'searchValue': homeSearchQuery.value,
         },
+        cancelToken: _cancelToken,
       );
 
       if (resp.statusCode == 200 && resp.data['content'] != null) {
@@ -97,7 +109,7 @@ class _HomePageState extends State<HomePage> {
             .map((e) => UserServiceShortDto.fromJson(e))
             .toList();
 
-        setState(() {
+        _safeSetState(() {
           _results.addAll(items);
           _last = (resp.data['last'] as bool?) ?? true;
           _loading = false;
@@ -105,8 +117,17 @@ class _HomePageState extends State<HomePage> {
       } else {
         throw Exception('Bad response: ${resp.statusCode}');
       }
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        // тихо игнорим отменённый запрос
+        return;
+      }
+      _safeSetState(() {
+        _loading = false;
+        _error = 'Network error: ${e.message}';
+      });
     } catch (e) {
-      setState(() {
+      _safeSetState(() {
         _loading = false;
         _error = 'Failed to load services: $e';
       });
@@ -120,13 +141,73 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_error != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _error!,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
+              ),
+            ),
+          ],
+
+          // верхний индикатор при первом лоаде
+          if (_loading && _results.isEmpty) ...[
+            const LinearProgressIndicator(),
+            const SizedBox(height: 12),
+          ],
+
+          // сетка или пустое состояние
+          if (_results.isEmpty && !_loading)
+            SizedBox(
+              height: 180,
+              child: Center(
+                child: Text(
+                  'Nothing found',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            )
+          else
+            ServicesGrid(
+              services: _results,
+              onTap: (s) => debugPrint('Tapped ${s.name}'),
+            ),
+
           const SizedBox(height: 12),
-          ServicesGrid(
-            services: _results,
-            onTap: (s) {
-              debugPrint('Tapped ${s.name}');
-            },
-          ),
+
+          // нижний индикатор при догрузке + кнопка Load more
+          if (!_last) ...[
+            if (_loading && _results.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: LinearProgressIndicator(),
+              ),
+            Align(
+              alignment: Alignment.center,
+              child: SizedBox(
+                width: 220,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.expand_more),
+                  label: const Text('Load more'),
+                  onPressed: _loading
+                      ? null
+                      : () {
+                          _safeSetState(() => _page += 1);
+                          _triggerSearch(reset: false);
+                        },
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 24),
         ],
       ),

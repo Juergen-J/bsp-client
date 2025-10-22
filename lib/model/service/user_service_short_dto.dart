@@ -1,4 +1,5 @@
 import 'package:berlin_service_portal/model/service/price_dto.dart';
+import 'package:berlin_service_portal/model/service/service_attribute_dto.dart';
 import 'package:berlin_service_portal/model/service/short_service_type_dto.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -20,6 +21,8 @@ class UserServiceShortDto {
 
   final List<AttachmentDto> attachments;
 
+  final List<ServiceAttributeDto> attributes;
+
   const UserServiceShortDto({
     required this.id,
     required this.serviceType,
@@ -27,6 +30,7 @@ class UserServiceShortDto {
     required this.description,
     required this.price,
     this.attachments = const [],
+    this.attributes = const []
   });
 
   factory UserServiceShortDto.fromJson(Map<String, dynamic> json) =>

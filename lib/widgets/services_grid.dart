@@ -40,8 +40,7 @@ class ServicesGrid extends StatelessWidget {
               service: s,
               priceUnit: 'VB',
               onTap: onTap != null ? () => onTap!(s) : null,
-              onMessage: onMessage != null ? () => onMessage!(s) : null,
-              tags: ['React','Node.js','TypeScript'],
+              onMessage: onMessage != null ? () => onMessage!(s) : null
             );
           },
         );

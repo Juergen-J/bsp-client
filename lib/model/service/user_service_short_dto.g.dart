@@ -18,6 +18,11 @@ UserServiceShortDto _$UserServiceShortDtoFromJson(Map<String, dynamic> json) =>
               ?.map((e) => AttachmentDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      attributes: (json['attributes'] as List<dynamic>?)
+              ?.map((e) =>
+                  ServiceAttributeDto.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$UserServiceShortDtoToJson(
@@ -29,4 +34,5 @@ Map<String, dynamic> _$UserServiceShortDtoToJson(
       'description': instance.description,
       'price': instance.price,
       'attachments': instance.attachments,
+      'attributes': instance.attributes,
     };

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:berlin_service_portal/model/service/user_service_full_dto.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:berlin_service_portal/widgets/services_grid.dart';
 import 'package:dio/dio.dart';
@@ -8,7 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../app/router.dart' show homeSearchQuery, homeSelectedCategoryId;
 import '../model/service/user_service_short_dto.dart';
-import '../widgets/cards/service_full_detail_dialog.dart';
+import '../widgets/cards/service_full_detail_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,6 +30,11 @@ class _HomePageState extends State<HomePage> {
   final List<UserServiceShortDto> _results = [];
   bool _loading = false;
   String? _error;
+
+  String? _selectedServiceId;
+  UserServiceFullDto? _selectedServiceFull;
+  bool _loadingDetails = false;
+  String? _detailsError;
 
   // пагинация
   int _page = 0;
@@ -135,22 +141,56 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _openServiceDetails(UserServiceShortDto service) {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogCtx) {
-        return Dialog(
-          insetPadding: const EdgeInsets.all(24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: ServiceFullDetailDialog(
-            serviceId: service.id,
-            priceUnit: 'VB',
-            onClose: () => Navigator.of(dialogCtx).pop(),
-          ),
-        );
-      },
-    );
+  Future<void> _openServiceDetails(UserServiceShortDto service) async {
+    _safeSetState(() {
+      _selectedServiceId = service.id;
+      _loadingDetails = true;
+      _detailsError = null;
+      _selectedServiceFull = null;
+    });
+
+    final dio = Provider.of<AuthService>(context, listen: false).dio;
+    try {
+      final resp = await dio.get('/v1/service/${service.id}');
+      if (resp.statusCode == 200 && resp.data != null) {
+        _safeSetState(() {
+          _selectedServiceFull =
+              UserServiceFullDto.fromJson(resp.data as Map<String, dynamic>);
+          _loadingDetails = false;
+        });
+      } else {
+        throw Exception('Bad response: ${resp.statusCode}');
+      }
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) return;
+      _safeSetState(() {
+        _loadingDetails = false;
+        _detailsError = 'Network error: ${e.message}';
+      });
+    } catch (e) {
+      _safeSetState(() {
+        _loadingDetails = false;
+        _detailsError = 'Failed to load service: $e';
+      });
+    }
+  }
+
+  void _clearSelectedService() {
+    _safeSetState(() {
+      _selectedServiceId = null;
+      _selectedServiceFull = null;
+      _loadingDetails = false;
+      _detailsError = null;
+    });
+  }
+
+  UserServiceShortDto? _findSelectedShort() {
+    if (_selectedServiceId == null) return null;
+    try {
+      return _results.firstWhere((s) => s.id == _selectedServiceId);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -183,49 +223,101 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
           ],
 
-          // сетка или пустое состояние
-          if (_results.isEmpty && !_loading)
-            SizedBox(
-              height: 180,
-              child: Center(
-                child: Text(
-                  'Nothing found',
-                  style: Theme.of(context).textTheme.bodyLarge,
+          if (_selectedServiceId == null)
+            ...[
+              // сетка или пустое состояние
+              if (_results.isEmpty && !_loading)
+                SizedBox(
+                  height: 180,
+                  child: Center(
+                    child: Text(
+                      'Nothing found',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                )
+              else
+                ServicesGrid(
+                  services: _results,
+                  onTap: _openServiceDetails,
                 ),
-              ),
-            )
+
+              const SizedBox(height: 12),
+
+              // нижний индикатор при догрузке + кнопка Load more
+              if (!_last) ...[
+                if (_loading && _results.isNotEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: LinearProgressIndicator(),
+                  ),
+                Align(
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: 220,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('Load more'),
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              _safeSetState(() => _page += 1);
+                              _triggerSearch(reset: false);
+                            },
+                    ),
+                  ),
+                ),
+              ],
+            ]
           else
-            ServicesGrid(
-              services: _results,
-              onTap: _openServiceDetails,
-            ),
-
-          const SizedBox(height: 12),
-
-          // нижний индикатор при догрузке + кнопка Load more
-          if (!_last) ...[
-            if (_loading && _results.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: LinearProgressIndicator(),
-              ),
-            Align(
-              alignment: Alignment.center,
-              child: SizedBox(
-                width: 220,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.expand_more),
-                  label: const Text('Load more'),
-                  onPressed: _loading
-                      ? null
-                      : () {
-                          _safeSetState(() => _page += 1);
-                          _triggerSearch(reset: false);
-                        },
-                ),
-              ),
-            ),
-          ],
+            ...[
+              const SizedBox(height: 12),
+              if (_loadingDetails)
+                const Center(child: CircularProgressIndicator())
+              else if (_detailsError != null)
+                Column(
+                  children: [
+                    Text(
+                      _detailsError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OutlinedButton(
+                          onPressed: _clearSelectedService,
+                          child: const Text('Back'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            final selected = _findSelectedShort();
+                            if (selected == null) {
+                              _clearSelectedService();
+                              return;
+                            }
+                            _openServiceDetails(selected);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              else if (_selectedServiceFull != null)
+                SingleChildScrollView(
+                  child: ServiceFullDetailCard(
+                    full: _selectedServiceFull!,
+                    priceUnit: 'VB',
+                    onClose: _clearSelectedService,
+                  ),
+                )
+              else
+                const SizedBox.shrink(),
+            ],
 
           const SizedBox(height: 24),
         ],

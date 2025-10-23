@@ -10,6 +10,7 @@ class ServiceFullDetailDialog extends StatefulWidget {
   final String serviceId;
   final VoidCallback? onClose;
   final VoidCallback? onMessage;
+  final VoidCallback? onFavorite;
   final String? priceUnit;
 
   const ServiceFullDetailDialog({
@@ -17,6 +18,7 @@ class ServiceFullDetailDialog extends StatefulWidget {
     required this.serviceId,
     this.onClose,
     this.onMessage,
+    this.onFavorite,
     this.priceUnit,
   });
 
@@ -93,6 +95,7 @@ class _ServiceFullDetailDialogState extends State<ServiceFullDetailDialog> {
               priceUnit: widget.priceUnit,
               onClose: widget.onClose,
               onMessage: widget.onMessage,
+              onFavorite: widget.onFavorite,
             )
           else
             // скелетон/лоадер до прихода данных

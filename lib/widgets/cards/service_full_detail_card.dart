@@ -1,18 +1,16 @@
-import 'dart:collection';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../model/attachment/attachment_dto.dart';
 import '../../model/attachment/image_attachment_dto.dart';
 import '../../model/service/service_attribute_dto.dart';
 import '../../model/service/user_service_full_dto.dart';
-import '../../service/image_service.dart';
 import '../device_image_carousel.dart'; // путь поправь под свой проект
 
 class ServiceFullDetailCard extends StatelessWidget {
   final UserServiceFullDto full;
   final VoidCallback? onClose;
   final VoidCallback? onMessage;
+  final VoidCallback? onFavorite;
   final String? priceUnit;
 
   const ServiceFullDetailCard({
@@ -20,6 +18,7 @@ class ServiceFullDetailCard extends StatelessWidget {
     required this.full,
     this.onClose,
     this.onMessage,
+    this.onFavorite,
     this.priceUnit,
   });
 
@@ -39,10 +38,12 @@ class ServiceFullDetailCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cs.outlineVariant.withOpacity(0.25)),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.25),
+          ),
           boxShadow: [
             BoxShadow(
-              color: cs.shadow.withOpacity(0.05),
+              color: cs.shadow.withValues(alpha: 0.05),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -73,22 +74,60 @@ class ServiceFullDetailCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            full.name,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: cs.onSurface,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      full.name,
+                                      style:
+                                          theme.textTheme.headlineSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: cs.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      price,
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: cs.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _DetailActionIcon(
+                                    icon: Icons.chat_bubble_outline,
+                                    tooltip: 'Message',
+                                    onTap: onMessage,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  _DetailActionIcon(
+                                    icon: Icons.star_border,
+                                    tooltip: 'Favorite',
+                                    onTap: onFavorite,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  _DetailActionIcon(
+                                    icon: Icons.close,
+                                    tooltip: 'Close',
+                                    onTap: onClose ??
+                                        () => Navigator.of(context).maybePop(),
+                                    forceEnabled: true,
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            price,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: cs.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
 
                           // Теги и адрес
                           Wrap(
@@ -101,27 +140,6 @@ class ServiceFullDetailCard extends StatelessWidget {
                                   text: addrStr,
                                   color: cs.secondaryContainer,
                                 ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Кнопки действий (справа сверху)
-                          Row(
-                            children: [
-                              if (onMessage != null)
-                                _CircleIconButton(
-                                  icon: Icons.chat_bubble_outline,
-                                  tooltip: 'Message',
-                                  onPressed: onMessage,
-                                ),
-                              const SizedBox(width: 12),
-                              _CircleIconButton(
-                                icon: Icons.close,
-                                tooltip: 'Close',
-                                onPressed: onClose ??
-                                    () => Navigator.of(context).maybePop(),
-                              ),
                             ],
                           ),
                         ],
@@ -265,7 +283,9 @@ class _TagPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.outlineVariant.withOpacity(0.3)),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.3),
+        ),
       ),
       child: Text(
         text,
@@ -278,38 +298,36 @@ class _TagPill extends StatelessWidget {
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
+class _DetailActionIcon extends StatelessWidget {
   final IconData icon;
-  final VoidCallback? onPressed;
-  final String? tooltip;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final bool forceEnabled;
 
-  const _CircleIconButton({required this.icon, this.onPressed, this.tooltip});
+  const _DetailActionIcon({
+    required this.icon,
+    required this.tooltip,
+    this.onTap,
+    this.forceEnabled = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final btn = Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onPressed,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: cs.outlineVariant.withOpacity(0.6)),
-            color: cs.surface,
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 18, color: cs.onSurfaceVariant),
-        ),
+    final enabled = forceEnabled || onTap != null;
+    final color = enabled ? cs.outline : cs.outlineVariant;
+
+    final button = SizedBox(
+      width: 30,
+      height: 30,
+      child: InkResponse(
+        onTap: enabled ? onTap : null,
+        radius: 18,
+        child: Icon(icon, size: 20, color: color),
       ),
     );
-    return (tooltip?.isNotEmpty ?? false)
-        ? Tooltip(message: tooltip!, child: btn)
-        : btn;
+
+    return Tooltip(message: tooltip, child: button);
   }
 }
 

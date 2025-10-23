@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../app/router.dart' show homeSearchQuery, homeSelectedCategoryId;
 import '../model/service/user_service_short_dto.dart';
+import '../widgets/cards/service_full_detail_dialog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -134,6 +135,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  void _openServiceDetails(UserServiceShortDto service) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: ServiceFullDetailDialog(
+            serviceId: service.id,
+            priceUnit: 'VB',
+            onClose: () => Navigator.of(dialogCtx).pop(),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -178,7 +197,7 @@ class _HomePageState extends State<HomePage> {
           else
             ServicesGrid(
               services: _results,
-              onTap: (s) => debugPrint('Tapped ${s.name}'),
+              onTap: _openServiceDetails,
             ),
 
           const SizedBox(height: 12),

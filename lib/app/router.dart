@@ -78,6 +78,13 @@ final GoRouter router = GoRouter(
               name: 'home',
               builder: (context, state) => const HomePage(),
             ),
+            GoRoute(
+              path: '/service/:serviceId',
+              name: 'serviceDetail',
+              builder: (context, state) => HomePage(
+                selectedServiceId: state.pathParameters['serviceId']!,
+              ),
+            ),
           ],
         ),
         StatefulShellBranch(
@@ -357,6 +364,12 @@ int? _getSelectedIndex(BuildContext context) {
     case '/service':
       return 4;
     default:
-      return null;
+      break;
   }
+
+  if (location.startsWith('/service/')) {
+    return 0;
+  }
+
+  return null;
 }

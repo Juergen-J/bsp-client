@@ -6,12 +6,14 @@ class ServicesGrid extends StatelessWidget {
   final List<UserServiceShortDto> services;
   final void Function(UserServiceShortDto)? onTap;
   final void Function(UserServiceShortDto)? onMessage;
+  final void Function(UserServiceShortDto)? onFavorite;
 
   const ServicesGrid({
     super.key,
     required this.services,
     this.onTap,
     this.onMessage,
+    this.onFavorite,
   });
 
   @override
@@ -40,7 +42,8 @@ class ServicesGrid extends StatelessWidget {
               service: s,
               priceUnit: 'VB',
               onTap: onTap != null ? () => onTap!(s) : null,
-              onMessage: onMessage != null ? () => onMessage!(s) : null
+              onMessage: onMessage != null ? () => onMessage!(s) : null,
+              onFavorite: onFavorite != null ? () => onFavorite!(s) : null,
             );
           },
         );

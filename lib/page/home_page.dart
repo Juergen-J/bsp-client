@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../app/router.dart' show homeSearchQuery, homeSelectedCategoryId;
 import '../model/service/user_service_short_dto.dart';
+import '../provider/messager_provider.dart';
 import '../widgets/cards/service_full_detail_card.dart';
 import '../widgets/services_grid.dart';
 
@@ -253,6 +254,123 @@ class _HomePageState extends State<HomePage> {
     _selectServiceById(id);
   }
 
+  void _triggerConversationForOwner(String ownerUserId) {
+    unawaited(_startConversationWith(ownerUserId));
+  }
+
+  Future<void> _startConversationWith(String ownerUserId) async {
+    final loggedIn = await requireLoginIfNeeded(context);
+    if (!mounted || !loggedIn) return;
+
+    final auth = context.read<AuthService>();
+    final currentUserId = auth.getUserInfo()?.id;
+    if (currentUserId != null && currentUserId == ownerUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You cannot message your own service.')),
+      );
+      return;
+    }
+
+    final messagesProv = context.read<MessagesProvider>();
+
+    try {
+      await auth.ensureTokenIsFresh();
+      final response = await auth.dio.post(
+        '/v1/chat',
+        options: Options(headers: {'Content-Type': 'application/json'}),
+        data: [ownerUserId],
+      );
+
+      final chatId = _extractChatId(response.data);
+      await messagesProv.fetchConversations();
+      if (chatId != null) {
+        messagesProv.selectChat(chatId);
+        await messagesProv.fetchMessages();
+      }
+
+      if (!mounted) return;
+      GoRouter.of(context).go('/messages');
+    } on DioException catch (e) {
+      final chatId = _extractChatId(e.response?.data);
+      await messagesProv.fetchConversations();
+
+      if (chatId != null) {
+        messagesProv.selectChat(chatId);
+        await messagesProv.fetchMessages();
+        if (mounted) {
+          GoRouter.of(context).go('/messages');
+        }
+        return;
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_describeChatError(e))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to start conversation.')),
+      );
+    }
+  }
+
+  String _describeChatError(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+
+    switch (e.response?.statusCode) {
+      case 400:
+        return 'Unable to start conversation.';
+      case 401:
+        return 'Please log in to continue.';
+      case 404:
+        return 'Service owner not found.';
+      case 409:
+        return 'Conversation already exists.';
+      default:
+        return 'Failed to start conversation. Please try again later.';
+    }
+  }
+
+  String? _extractChatId(dynamic raw) {
+    if (raw == null) return null;
+
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        if (key is String) {
+          final normalized = key.toLowerCase();
+          if (normalized == 'chatid' || normalized == 'chat_id') {
+            final text = value?.toString();
+            if (text != null && text.isNotEmpty) {
+              return text;
+            }
+          }
+        }
+      }
+      for (final value in raw.values) {
+        final nested = _extractChatId(value);
+        if (nested != null) return nested;
+      }
+    } else if (raw is Iterable) {
+      for (final item in raw) {
+        final nested = _extractChatId(item);
+        if (nested != null) return nested;
+      }
+    } else if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty || trimmed.contains(' ')) return null;
+      if (RegExp(r'^[A-Za-z0-9\-]+$').hasMatch(trimmed)) {
+        return trimmed;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -299,6 +417,8 @@ class _HomePageState extends State<HomePage> {
               ServicesGrid(
                 services: _results,
                 onTap: _openServiceDetails,
+                onMessage: (s) => _triggerConversationForOwner(s.userId),
+                onFavorite: (s) => _triggerConversationForOwner(s.userId),
               ),
 
             const SizedBox(height: 12),
@@ -363,6 +483,10 @@ class _HomePageState extends State<HomePage> {
                   full: _selectedServiceFull!,
                   priceUnit: 'VB',
                   onClose: _clearSelectedService,
+                  onMessage: () => _triggerConversationForOwner(
+                      _selectedServiceFull!.userId),
+                  onFavorite: () => _triggerConversationForOwner(
+                      _selectedServiceFull!.userId),
                 ),
               )
             else

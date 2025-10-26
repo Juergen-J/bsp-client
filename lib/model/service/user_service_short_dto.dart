@@ -11,6 +11,8 @@ part 'user_service_short_dto.g.dart';
 class UserServiceShortDto {
   final String id;
 
+  final String userId;
+
   final ShortServiceTypeDto serviceType;
 
   final String name;
@@ -25,6 +27,7 @@ class UserServiceShortDto {
 
   const UserServiceShortDto({
     required this.id,
+    required this.userId,
     required this.serviceType,
     required this.name,
     required this.description,

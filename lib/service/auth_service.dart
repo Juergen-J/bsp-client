@@ -5,7 +5,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
-import '../app/stomp_client_notifier.dart';
 import '../model/login_response.dart';
 import '../page/modal/modal_service.dart';
 import '../page/modal/modal_type.dart';

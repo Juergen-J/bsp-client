@@ -78,6 +78,13 @@ final GoRouter router = GoRouter(
               name: 'home',
               builder: (context, state) => const HomePage(),
             ),
+            GoRoute(
+              path: '/service/:serviceId',
+              name: 'serviceDetail',
+              builder: (context, state) => HomePage(
+                selectedServiceId: state.pathParameters['serviceId']!,
+              ),
+            ),
           ],
         ),
         StatefulShellBranch(
@@ -252,23 +259,34 @@ Widget buildDesktopScaffold(
               ),
             ),
           ),
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: SizedBox(
-                    width: contentWidth,
-                    child: navigationShell,
+        SliverToBoxAdapter(
+          child: LayoutBuilder(
+            builder: (ctx, c) {
+              final viewportH = MediaQuery.of(ctx).size.height;
+              final minBodyH = viewportH - kFooterHeight;
+
+              return Column(
+                children: [
+                  // Место для контента страниц (navigationShell) c ЖЁСТКОЙ высотой:
+                  Center(
+                    child: SizedBox(
+                      width: contentWidth,
+                      child: SizedBox(
+                        height: minBodyH, // <-- ключевая строка
+                        child:
+                            navigationShell, // тут сидят Offstage/IndexedStack от go_router
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              FooterComponent(
-                contentWidth: contentWidth,
-                height: kFooterHeight,
-              ),
-            ],
+
+                  // Футер всегда внизу
+                  FooterComponent(
+                    contentWidth: contentWidth,
+                    height: kFooterHeight,
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -346,6 +364,12 @@ int? _getSelectedIndex(BuildContext context) {
     case '/service':
       return 4;
     default:
-      return null;
+      break;
   }
+
+  if (location.startsWith('/service/')) {
+    return 0;
+  }
+
+  return null;
 }

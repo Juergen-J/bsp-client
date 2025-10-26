@@ -2,12 +2,8 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_flavor/flutter_flavor.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../model/device/brand.dart';
-import '../model/device/device_type.dart';
 import '../model/device/short_device_dto.dart';
 import '../service/auth_service.dart';
 import '../widgets/cards/add_device_card.dart';

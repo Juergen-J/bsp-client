@@ -40,7 +40,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
   final _searchController = TextEditingController();
 
   List<ShortServiceTypeDto> _categories = [];
-  String? _selectedCategoryId; // null = All
+  String? _selectedCategoryId; // становится ненулевым после загрузки
   bool _loadingCats = true;
 
   @override
@@ -65,8 +65,23 @@ class _CustomAppBarState extends State<CustomAppBar> {
         final items = (resp.data['content'] as List)
             .map((e) => ShortServiceTypeDto.fromJson(e))
             .toList();
+
+        var selectedId = _selectedCategoryId;
+        if (items.isNotEmpty) {
+          final containsSelected =
+              selectedId != null && items.any((c) => c.id == selectedId);
+          if (!containsSelected) {
+            selectedId = items.first.id;
+            homeSelectedCategoryId.value = selectedId;
+          }
+        } else {
+          selectedId = null;
+          homeSelectedCategoryId.value = null;
+        }
+
         setState(() {
           _categories = items;
+          _selectedCategoryId = selectedId;
           _loadingCats = false;
         });
       } else {
@@ -87,6 +102,9 @@ class _CustomAppBarState extends State<CustomAppBar> {
   }
 
   void _onSelectCategory(String? id) {
+    if (id == null && _categories.isNotEmpty) {
+      id = _categories.first.id;
+    }
     setState(() => _selectedCategoryId = id);
     homeSelectedCategoryId.value = id;
     // ВНИМАНИЕ: поиск не запускаем — будет учтен на следующем Enter/лупе
@@ -160,18 +178,12 @@ class _CustomAppBarState extends State<CustomAppBar> {
                         )
                       else
                         DropdownButtonHideUnderline(
-                          child: DropdownButton<String?>(
+                          child: DropdownButton<String>(
                             value: _selectedCategoryId,
-                            // null = All
-                            hint: const Text('All'),
                             isDense: true,
-                            items: <DropdownMenuItem<String?>>[
-                              const DropdownMenuItem(
-                                value: null,
-                                child: Text('All'),
-                              ),
+                            items: <DropdownMenuItem<String>>[
                               ..._categories.map(
-                                (c) => DropdownMenuItem<String?>(
+                                (c) => DropdownMenuItem<String>(
                                   value: c.id,
                                   child: Text(
                                     c.displayName,

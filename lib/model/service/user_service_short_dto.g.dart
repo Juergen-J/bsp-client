@@ -9,6 +9,7 @@ part of 'user_service_short_dto.dart';
 UserServiceShortDto _$UserServiceShortDtoFromJson(Map<String, dynamic> json) =>
     UserServiceShortDto(
       id: json['id'] as String,
+      userId: json['userId'] as String,
       serviceType: ShortServiceTypeDto.fromJson(
           json['serviceType'] as Map<String, dynamic>),
       name: json['name'] as String,
@@ -18,15 +19,22 @@ UserServiceShortDto _$UserServiceShortDtoFromJson(Map<String, dynamic> json) =>
               ?.map((e) => AttachmentDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      attributes: (json['attributes'] as List<dynamic>?)
+              ?.map((e) =>
+                  ServiceAttributeDto.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$UserServiceShortDtoToJson(
         UserServiceShortDto instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'userId': instance.userId,
       'serviceType': instance.serviceType,
       'name': instance.name,
       'description': instance.description,
       'price': instance.price,
       'attachments': instance.attachments,
+      'attributes': instance.attributes,
     };

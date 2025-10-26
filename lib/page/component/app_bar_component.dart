@@ -166,10 +166,10 @@ class _CustomAppBarState extends State<CustomAppBar> {
                             hint: const Text('All'),
                             isDense: true,
                             items: <DropdownMenuItem<String?>>[
-                              const DropdownMenuItem(
-                                value: null,
-                                child: Text('All'),
-                              ),
+                              // const DropdownMenuItem(
+                              //   value: null,
+                              //   child: Text('All'),
+                              // ),
                               ..._categories.map(
                                 (c) => DropdownMenuItem<String?>(
                                   value: c.id,

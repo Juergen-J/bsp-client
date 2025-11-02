@@ -12,6 +12,7 @@ class ServiceFullDetailCard extends StatelessWidget {
   final VoidCallback? onMessage;
   final VoidCallback? onFavorite;
   final String? priceUnit;
+  final bool isFavorite;
 
   const ServiceFullDetailCard({
     super.key,
@@ -20,6 +21,7 @@ class ServiceFullDetailCard extends StatelessWidget {
     this.onMessage,
     this.onFavorite,
     this.priceUnit,
+    this.isFavorite = false,
   });
 
   @override
@@ -111,9 +113,10 @@ class ServiceFullDetailCard extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 4),
                                   _DetailActionIcon(
-                                    icon: Icons.star_border,
+                                    icon: isFavorite ? Icons.star : Icons.star_border,
                                     tooltip: 'Favorite',
                                     onTap: onFavorite,
+                                    color: isFavorite ? cs.primary : null,
                                   ),
                                   const SizedBox(width: 4),
                                   _DetailActionIcon(
@@ -303,19 +306,22 @@ class _DetailActionIcon extends StatelessWidget {
   final String tooltip;
   final VoidCallback? onTap;
   final bool forceEnabled;
+  final Color? color;
 
   const _DetailActionIcon({
     required this.icon,
     required this.tooltip,
     this.onTap,
     this.forceEnabled = false,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final enabled = forceEnabled || onTap != null;
-    final color = enabled ? cs.outline : cs.outlineVariant;
+    final iconColor =
+        enabled ? (color ?? cs.outline) : cs.outlineVariant;
 
     final button = SizedBox(
       width: 30,
@@ -323,7 +329,7 @@ class _DetailActionIcon extends StatelessWidget {
       child: InkResponse(
         onTap: enabled ? onTap : null,
         radius: 18,
-        child: Icon(icon, size: 20, color: color),
+        child: Icon(icon, size: 20, color: iconColor),
       ),
     );
 

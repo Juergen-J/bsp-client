@@ -102,9 +102,14 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
                               ),
                               const SizedBox(width: 4),
                               _ActionIcon(
-                                icon: Icons.star_border,
+                                icon: widget.service.favorite
+                                    ? Icons.star
+                                    : Icons.star_border,
                                 tooltip: 'Favorite',
                                 onTap: widget.onFavorite,
+                                color: widget.service.favorite
+                                    ? cs.primary
+                                    : cs.outline,
                               ),
                             ],
                           ),
@@ -219,8 +224,14 @@ class _ActionIcon extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
+  final Color? color;
 
-  const _ActionIcon({required this.icon, required this.tooltip, this.onTap});
+  const _ActionIcon({
+    required this.icon,
+    required this.tooltip,
+    this.onTap,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +246,7 @@ class _ActionIcon extends StatelessWidget {
           message: tooltip,
           child: Icon(icon,
               size: 20,
-              color: cs.outline), // компактно и на одной линии с текстом
+              color: color ?? cs.outline), // компактно и на одной линии с текстом
         ),
       ),
     );

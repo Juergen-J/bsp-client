@@ -3,6 +3,7 @@ import 'package:berlin_service_portal/provider/messager_provider.dart';
 import 'package:berlin_service_portal/service/auth_redirect_service.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:berlin_service_portal/service/image_service.dart';
+import 'package:berlin_service_portal/service/favorite_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
@@ -21,60 +22,76 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   FlavorConfig(
-      name: "DEV",
-      color: Colors.red,
-      location: BannerLocation.bottomEnd,
-      variables: {"beHost": "localhost:8090"});
+    name: "DEV",
+    color: Colors.red,
+    location: BannerLocation.bottomEnd,
+    variables: {"beHost": "localhost:8090"},
+  );
   setPathUrlStrategy();
-  runApp(MultiProvider(providers: [
-    ChangeNotifierProvider(create: (_) => AuthRedirectService()),
-    ChangeNotifierProvider(
-      create: (_) {
-        final authService =
-        AuthService(FlavorConfig.instance.variables['beHost']);
-        print("AuthService created");
-        return authService;
-      },
-    ),
-    ChangeNotifierProxyProvider<AuthService, StompClientNotifier>(
-      create: (context) {
-        final authService = context.read<AuthService>();
-        print("StompClientNotifier created");
-        return StompClientNotifier(authService);
-      },
-      update: (context, authService, stompNotifier) {
-        print("StompClientNotifier updated");
-        stompNotifier ??= StompClientNotifier(authService);
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthRedirectService()),
+        ChangeNotifierProvider(
+          create: (_) {
+            final authService = AuthService(
+              FlavorConfig.instance.variables['beHost'],
+            );
+            print("AuthService created");
+            return authService;
+          },
+        ),
+        ChangeNotifierProxyProvider<AuthService, StompClientNotifier>(
+          create: (context) {
+            final authService = context.read<AuthService>();
+            print("StompClientNotifier created");
+            return StompClientNotifier(authService);
+          },
+          update: (context, authService, stompNotifier) {
+            print("StompClientNotifier updated");
+            stompNotifier ??= StompClientNotifier(authService);
 
-        authService.onLoginCallback = () {
-          stompNotifier!.connectStompClient();
-        };
-        authService.onLogoutCallback = () {
-          stompNotifier!.stompClient?.deactivate();
-        };
+            authService.onLoginCallback = () {
+              stompNotifier!.connectStompClient();
+            };
+            authService.onLogoutCallback = () {
+              stompNotifier!.stompClient?.deactivate();
+            };
 
-        authService.init();
+            authService.init();
 
-        return stompNotifier;
-      },
-    ),
-    ChangeNotifierProxyProvider<AuthService, MessagesProvider>(
-      create: (context) => MessagesProvider(context.read<AuthService>()),
-      update: (context, authService, messagesProv) {
-        messagesProv ??= MessagesProvider(authService);
+            return stompNotifier;
+          },
+        ),
+        ChangeNotifierProxyProvider<AuthService, MessagesProvider>(
+          create: (context) => MessagesProvider(context.read<AuthService>()),
+          update: (context, authService, messagesProv) {
+            messagesProv ??= MessagesProvider(authService);
 
-        if (!authService.isLoggedIn) {
-          messagesProv.clear();
-        } else {
-          messagesProv.fetchConversations();
-        }
-        return messagesProv;
-      },
+            if (!authService.isLoggedIn) {
+              messagesProv.clear();
+            } else {
+              messagesProv.fetchConversations();
+            }
+            return messagesProv;
+          },
+        ),
+        ProxyProvider<AuthService, ImageService>(
+          update: (_, auth, __) => ImageService(dio: auth.dio),
+        ),
+        ChangeNotifierProxyProvider<AuthService, FavoriteService>(
+          create: (context) =>
+              FavoriteService(dio: context.read<AuthService>().dio),
+          update: (_, auth, favorite) {
+            favorite ??= FavoriteService(dio: auth.dio);
+            favorite.updateClient(auth.dio);
+            return favorite;
+          },
+        ),
+        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => ModalManager()),
+      ],
+      child: const BSPApp(),
     ),
-    ProxyProvider<AuthService, ImageService>(
-      update: (_, auth, __) => ImageService(dio: auth.dio),
-    ),
-    ChangeNotifierProvider(create: (_) => AppState()),
-    ChangeNotifierProvider(create: (_) => ModalManager())
-  ], child: const BSPApp()));
+  );
 }

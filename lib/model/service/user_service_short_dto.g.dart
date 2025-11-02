@@ -24,6 +24,7 @@ UserServiceShortDto _$UserServiceShortDtoFromJson(Map<String, dynamic> json) =>
                   ServiceAttributeDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      favorite: json['favorite'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$UserServiceShortDtoToJson(
@@ -37,4 +38,5 @@ Map<String, dynamic> _$UserServiceShortDtoToJson(
       'price': instance.price,
       'attachments': instance.attachments,
       'attributes': instance.attributes,
+      'favorite': instance.favorite,
     };

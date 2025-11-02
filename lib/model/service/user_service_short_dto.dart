@@ -25,6 +25,8 @@ class UserServiceShortDto {
 
   final List<ServiceAttributeDto> attributes;
 
+  final bool favorite;
+
   const UserServiceShortDto({
     required this.id,
     required this.userId,
@@ -33,8 +35,33 @@ class UserServiceShortDto {
     required this.description,
     required this.price,
     this.attachments = const [],
-    this.attributes = const []
+    this.attributes = const [],
+    this.favorite = false,
   });
+
+  UserServiceShortDto copyWith({
+    String? id,
+    String? userId,
+    ShortServiceTypeDto? serviceType,
+    String? name,
+    String? description,
+    PriceDto? price,
+    List<AttachmentDto>? attachments,
+    List<ServiceAttributeDto>? attributes,
+    bool? favorite,
+  }) {
+    return UserServiceShortDto(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      serviceType: serviceType ?? this.serviceType,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      attachments: attachments ?? this.attachments,
+      attributes: attributes ?? this.attributes,
+      favorite: favorite ?? this.favorite,
+    );
+  }
 
   factory UserServiceShortDto.fromJson(Map<String, dynamic> json) =>
       _$UserServiceShortDtoFromJson(json);

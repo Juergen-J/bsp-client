@@ -3,6 +3,7 @@ import 'package:berlin_service_portal/provider/messager_provider.dart';
 import 'package:berlin_service_portal/service/auth_redirect_service.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
 import 'package:berlin_service_portal/service/image_service.dart';
+import 'package:berlin_service_portal/service/favorite_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_flavor/flutter_flavor.dart';
@@ -73,6 +74,9 @@ void main() async {
     ),
     ProxyProvider<AuthService, ImageService>(
       update: (_, auth, __) => ImageService(dio: auth.dio),
+    ),
+    ProxyProvider<AuthService, FavoriteService>(
+      update: (_, auth, __) => FavoriteService(dio: auth.dio),
     ),
     ChangeNotifierProvider(create: (_) => AppState()),
     ChangeNotifierProvider(create: (_) => ModalManager())

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:berlin_service_portal/model/service/user_service_full_dto.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
+import 'package:berlin_service_portal/service/favorite_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,8 @@ class _HomePageState extends State<HomePage> {
   UserServiceFullDto? _selectedServiceFull;
   bool _loadingDetails = false;
   String? _detailsError;
+  final Set<String> _favoriteMutations = {};
+  final Map<String, bool> _favoriteOverrides = {};
 
   // пагинация
   int _page = 0;
@@ -143,6 +146,7 @@ class _HomePageState extends State<HomePage> {
       if (resp.statusCode == 200 && resp.data['content'] != null) {
         final items = (resp.data['content'] as List)
             .map((e) => UserServiceShortDto.fromJson(e))
+            .map(_applyFavoriteOverride)
             .toList();
 
         _safeSetState(() {
@@ -258,6 +262,80 @@ class _HomePageState extends State<HomePage> {
     unawaited(_startConversationWith(ownerUserId));
   }
 
+  void _handleFavoriteTap(UserServiceShortDto service) {
+    unawaited(_toggleFavorite(service.id, currentFavorite: service.favorite));
+  }
+
+  void _handleFavoriteTapById(String serviceId) {
+    final current =
+        _favoriteOverrides[serviceId] ?? _favoriteFromResults(serviceId) ?? false;
+    unawaited(_toggleFavorite(serviceId, currentFavorite: current));
+  }
+
+  Future<void> _toggleFavorite(String serviceId,
+      {required bool currentFavorite}) async {
+    if (_favoriteMutations.contains(serviceId)) return;
+
+    final loggedIn = await requireLoginIfNeeded(context);
+    if (!mounted || !loggedIn) return;
+
+    _favoriteMutations.add(serviceId);
+    final nextFavorite = !currentFavorite;
+    _favoriteOverrides[serviceId] = nextFavorite;
+
+    _safeSetState(() {
+      final idx = _results.indexWhere((s) => s.id == serviceId);
+      if (idx != -1) {
+        _results[idx] = _results[idx].copyWith(favorite: nextFavorite);
+      }
+    });
+
+    final auth = context.read<AuthService>();
+    final favorites = context.read<FavoriteService>();
+
+    try {
+      await auth.ensureTokenIsFresh();
+      if (nextFavorite) {
+        await favorites.addFavorite(serviceId);
+      } else {
+        await favorites.removeFavorite(serviceId);
+      }
+    } on DioException catch (e) {
+      _favoriteOverrides[serviceId] = currentFavorite;
+      _safeSetState(() {
+        final idx = _results.indexWhere((s) => s.id == serviceId);
+        if (idx != -1) {
+          _results[idx] = _results[idx].copyWith(favorite: currentFavorite);
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_favoriteErrorMessage(e, nextFavorite))),
+        );
+      }
+    } catch (_) {
+      _favoriteOverrides[serviceId] = currentFavorite;
+      _safeSetState(() {
+        final idx = _results.indexWhere((s) => s.id == serviceId);
+        if (idx != -1) {
+          _results[idx] = _results[idx].copyWith(favorite: currentFavorite);
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Failed to update favorites. Please try again later.'),
+          ),
+        );
+      }
+    } finally {
+      _favoriteMutations.remove(serviceId);
+    }
+  }
+
   Future<void> _startConversationWith(String ownerUserId) async {
     final loggedIn = await requireLoginIfNeeded(context);
     if (!mounted || !loggedIn) return;
@@ -333,6 +411,47 @@ class _HomePageState extends State<HomePage> {
       default:
         return 'Failed to start conversation. Please try again later.';
     }
+  }
+
+  String _favoriteErrorMessage(DioException e, bool attemptedFavorite) {
+    final action = attemptedFavorite ? 'add to favorites' : 'remove from favorites';
+    final data = e.response?.data;
+    if (data is Map && data['message'] is String) {
+      return data['message'] as String;
+    }
+
+    switch (e.response?.statusCode) {
+      case 400:
+        return 'Unable to $action.';
+      case 401:
+        return 'Please log in to manage favorites.';
+      case 404:
+        return 'Service not found.';
+      default:
+        return 'Failed to $action. Please try again later.';
+    }
+  }
+
+  UserServiceShortDto _applyFavoriteOverride(UserServiceShortDto item) {
+    final override = _favoriteOverrides[item.id];
+    if (override == null) return item;
+    return item.copyWith(favorite: override);
+  }
+
+  bool _isFavorite(String serviceId) {
+    final override = _favoriteOverrides[serviceId];
+    if (override != null) return override;
+    final fromResults = _favoriteFromResults(serviceId);
+    return fromResults ?? false;
+  }
+
+  bool? _favoriteFromResults(String serviceId) {
+    for (final item in _results) {
+      if (item.id == serviceId) {
+        return item.favorite;
+      }
+    }
+    return null;
   }
 
   String? _extractChatId(dynamic raw) {
@@ -418,7 +537,7 @@ class _HomePageState extends State<HomePage> {
                 services: _results,
                 onTap: _openServiceDetails,
                 onMessage: (s) => _triggerConversationForOwner(s.userId),
-                onFavorite: (s) => _triggerConversationForOwner(s.userId),
+                onFavorite: _handleFavoriteTap,
               ),
 
             const SizedBox(height: 12),
@@ -485,8 +604,12 @@ class _HomePageState extends State<HomePage> {
                   onClose: _clearSelectedService,
                   onMessage: () => _triggerConversationForOwner(
                       _selectedServiceFull!.userId),
-                  onFavorite: () => _triggerConversationForOwner(
-                      _selectedServiceFull!.userId),
+                  onFavorite: _selectedServiceId == null
+                      ? null
+                      : () => _handleFavoriteTapById(_selectedServiceId!),
+                  isFavorite: _selectedServiceId != null
+                      ? _isFavorite(_selectedServiceId!)
+                      : false,
                 ),
               )
             else

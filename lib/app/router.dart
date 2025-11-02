@@ -14,6 +14,7 @@ import '../page/modal/modal_overlay.dart';
 import '../page/modal/modal_service.dart';
 import '../page/modal/modal_type.dart';
 import '../page/profile_page.dart';
+import '../page/favorites_page.dart';
 import '../service/auth_redirect_service.dart';
 import '../service/auth_service.dart';
 import 'app_state.dart';
@@ -92,7 +93,7 @@ final GoRouter router = GoRouter(
             GoRoute(
               path: '/favorites',
               name: 'favorites',
-              builder: (context, state) => const Placeholder(),
+              builder: (context, state) => const FavoritesPage(),
             ),
           ],
         ),

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:intl/intl.dart';
@@ -37,6 +38,8 @@ class ServiceCreateFormModal extends StatefulWidget {
 }
 
 class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
+  static const int _descriptionMaxLength = 5000;
+
   final _formKey = GlobalKey<FormState>();
 
   String name = '';
@@ -389,10 +392,18 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
                 TextFormField(
                   initialValue: description,
                   maxLines: 5,
+                  maxLength: _descriptionMaxLength,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   decoration: const InputDecoration(labelText: 'Description'),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Enter description'
-                      : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Enter description';
+                    }
+                    if (v.length > _descriptionMaxLength) {
+                      return 'Description can be at most 5000 characters';
+                    }
+                    return null;
+                  },
                   onChanged: (v) => description = v,
                 ),
                 const SizedBox(height: 24),

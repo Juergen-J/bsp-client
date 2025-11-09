@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -42,6 +43,8 @@ class ServiceEditFormModal extends StatefulWidget {
 }
 
 class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
+  static const int _descriptionMaxLength = 5000;
+
   final _formKey = GlobalKey<FormState>();
 
   UserServiceFullDto? service;
@@ -454,10 +457,15 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
               TextFormField(
                 controller: _descriptionCtrl,
                 maxLines: 4,
+                maxLength: _descriptionMaxLength,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
                 decoration: const InputDecoration(labelText: 'Description'),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Description is required';
+                  }
+                  if (value.length > _descriptionMaxLength) {
+                    return 'Description can be at most 5000 characters';
                   }
                   return null;
                 },

@@ -131,7 +131,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
               Row(
                 children: [
                   Text(
-                    'Find',
+                    'lok',
                     style: TextStyle(
                       color: colorScheme.onPrimary,
                       fontSize: 20,
@@ -139,7 +139,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
                     ),
                   ),
                   Text(
-                    'Xpert',
+                    'tu',
                     style: TextStyle(
                       color: colorScheme.onPrimary,
                       fontSize: 20,

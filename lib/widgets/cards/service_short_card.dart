@@ -34,7 +34,10 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    final tags = widget.service.attributes;
+    final tags = widget.service.attributes
+        .where((attr) =>
+            attr.property.trim().isNotEmpty || attr.value.trim().isNotEmpty)
+        .toList();
     final priceStr = _formatPrice(widget.service, widget.priceUnit ?? '');
 
     return MouseRegion(
@@ -115,17 +118,7 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
                           ),
                           const SizedBox(height: 10),
                           if (tags.isNotEmpty)
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: tags
-                                  .where((attr) =>
-                                      attr.property.trim().isNotEmpty ||
-                                      attr.value.trim().isNotEmpty)
-                                  .map((attr) => _Tag(attribute: attr))
-                                  .toList(),
-                            ),
-
+                            _TagsHeading(attributes: tags),
                           const SizedBox(height: 10),
                           Text(
                             widget.service.description,
@@ -247,6 +240,35 @@ class _ActionIcon extends StatelessWidget {
           child: Icon(icon,
               size: 20,
               color: color ?? cs.outline), // компактно и на одной линии с текстом
+        ),
+      ),
+    );
+  }
+}
+
+class _TagsHeading extends StatelessWidget {
+  final List<ServiceAttributeDto> attributes;
+
+  const _TagsHeading({required this.attributes});
+
+  @override
+  Widget build(BuildContext context) {
+    if (attributes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ClipRect(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        primary: false,
+        physics: const ClampingScrollPhysics(),
+        child: Row(
+          children: [
+            for (var i = 0; i < attributes.length; i++) ...[
+              _Tag(attribute: attributes[i]),
+              if (i != attributes.length - 1) const SizedBox(width: 8),
+            ],
+          ],
         ),
       ),
     );

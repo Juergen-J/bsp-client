@@ -14,9 +14,9 @@ ShortServiceTypeDto _$ShortServiceTypeDtoFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$ShortServiceTypeDtoToJson(
-        ShortServiceTypeDto instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'systemName': instance.systemName,
-      'displayName': instance.displayName,
-    };
+  ShortServiceTypeDto instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'systemName': instance.systemName,
+  'displayName': instance.displayName,
+};

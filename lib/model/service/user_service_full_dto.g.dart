@@ -10,10 +10,12 @@ UserServiceFullDto _$UserServiceFullDtoFromJson(Map<String, dynamic> json) =>
     UserServiceFullDto(
       id: json['id'] as String,
       serviceType: ShortServiceTypeDto.fromJson(
-          json['serviceType'] as Map<String, dynamic>),
+        json['serviceType'] as Map<String, dynamic>,
+      ),
       name: json['name'] as String,
       description: json['description'] as String,
-      devices: (json['devices'] as List<dynamic>?)
+      devices:
+          (json['devices'] as List<dynamic>?)
               ?.map((e) => ShortDeviceDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
@@ -22,12 +24,14 @@ UserServiceFullDto _$UserServiceFullDtoFromJson(Map<String, dynamic> json) =>
       attributes: (json['attributes'] as List<dynamic>)
           .map((e) => ServiceAttributeDto.fromJson(e as Map<String, dynamic>))
           .toList(),
-      attachments: (json['attachments'] as List<dynamic>?)
+      attachments:
+          (json['attachments'] as List<dynamic>?)
               ?.map((e) => AttachmentDto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
       address: AddressDto.fromJson(json['address'] as Map<String, dynamic>),
       status: $enumDecode(_$ElementStatusEnumMap, json['status']),
+      favorite: json['favorite'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$UserServiceFullDtoToJson(UserServiceFullDto instance) =>
@@ -43,6 +47,7 @@ Map<String, dynamic> _$UserServiceFullDtoToJson(UserServiceFullDto instance) =>
       'attachments': instance.attachments,
       'address': instance.address,
       'status': _$ElementStatusEnumMap[instance.status]!,
+      'favorite': instance.favorite,
     };
 
 const _$ElementStatusEnumMap = {

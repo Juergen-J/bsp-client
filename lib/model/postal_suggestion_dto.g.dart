@@ -16,11 +16,11 @@ PostalSuggestionDto _$PostalSuggestionDtoFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$PostalSuggestionDtoToJson(
-        PostalSuggestionDto instance) =>
-    <String, dynamic>{
-      'postcode': instance.postcode,
-      'city': instance.city,
-      'countryCode': instance.countryCode,
-      'countryName': instance.countryName,
-      'admin1': instance.admin1,
-    };
+  PostalSuggestionDto instance,
+) => <String, dynamic>{
+  'postcode': instance.postcode,
+  'city': instance.city,
+  'countryCode': instance.countryCode,
+  'countryName': instance.countryName,
+  'admin1': instance.admin1,
+};

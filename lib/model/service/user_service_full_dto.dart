@@ -34,6 +34,8 @@ class UserServiceFullDto {
 
   final ElementStatus status;
 
+  final bool favorite;
+
   const UserServiceFullDto({
     required this.id,
     required this.serviceType,
@@ -46,6 +48,7 @@ class UserServiceFullDto {
     this.attachments = const [],
     required this.address,
     required this.status,
+    this.favorite = false,
   });
 
   factory UserServiceFullDto.fromJson(Map<String, dynamic> json) =>

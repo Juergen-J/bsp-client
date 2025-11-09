@@ -7,12 +7,12 @@ part of 'device_type.dart';
 // **************************************************************************
 
 DeviceType _$DeviceTypeFromJson(Map<String, dynamic> json) => DeviceType(
-      id: json['id'] as String,
-      parentId: json['parentId'] as String?,
-      systemName: json['systemName'] as String,
-      displayName: json['displayName'] as String,
-      status: $enumDecodeNullable(_$ElementStatusEnumMap, json['status']),
-    );
+  id: json['id'] as String,
+  parentId: json['parentId'] as String?,
+  systemName: json['systemName'] as String,
+  displayName: json['displayName'] as String,
+  status: $enumDecodeNullable(_$ElementStatusEnumMap, json['status']),
+);
 
 Map<String, dynamic> _$DeviceTypeToJson(DeviceType instance) =>
     <String, dynamic>{

@@ -7,6 +7,8 @@ import '../page/component/app_bar_component.dart';
 import '../page/component/footer_component.dart';
 import '../page/component/sticky_menu_delegate.dart';
 import '../page/component/top_navigation_menu.dart';
+import '../model/device/short_device_dto.dart';
+import '../page/device_detail_page.dart';
 import '../page/devices_page.dart';
 import '../page/home_page.dart';
 import '../page/messages_page.dart';
@@ -35,12 +37,15 @@ final GoRouter router = GoRouter(
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            double contentWidth =
-                constraints.maxWidth > 1290 ? 1290 : constraints.maxWidth;
+            double contentWidth = constraints.maxWidth > 1290
+                ? 1290
+                : constraints.maxWidth;
             bool isMobile = constraints.maxWidth < 450;
             bool isOnMessagesPage = _getSelectedIndex(context) == 2;
-            bool isLoggedIn =
-                Provider.of<AuthService>(context, listen: false).isLoggedIn;
+            bool isLoggedIn = Provider.of<AuthService>(
+              context,
+              listen: false,
+            ).isLoggedIn;
 
             bool showMessagesButton =
                 constraints.maxWidth > 800 && !isOnMessagesPage && isLoggedIn;
@@ -52,8 +57,14 @@ final GoRouter router = GoRouter(
             return Stack(
               children: [
                 isMobile
-                    ? buildMobileScaffold(context, navigationShell,
-                        contentWidth, colorScheme, appState, height)
+                    ? buildMobileScaffold(
+                        context,
+                        navigationShell,
+                        contentWidth,
+                        colorScheme,
+                        appState,
+                        height,
+                      )
                     : buildDesktopScaffold(
                         context,
                         navigationShell,
@@ -61,10 +72,13 @@ final GoRouter router = GoRouter(
                         colorScheme,
                         appState,
                         height,
-                        kFooterHeight),
+                        kFooterHeight,
+                      ),
                 if (showMessagesButton)
                   ...buildStickyMessages(
-                      kFABBottomOffset, kMessagesWindowBottomOffset),
+                    kFABBottomOffset,
+                    kMessagesWindowBottomOffset,
+                  ),
                 const ModalOverlay(),
               ],
             );
@@ -86,6 +100,16 @@ final GoRouter router = GoRouter(
                 selectedServiceId: state.pathParameters['serviceId']!,
               ),
             ),
+            GoRoute(
+              path: '/device/:deviceId',
+              name: 'deviceDetail',
+              builder: (context, state) {
+                final extra = state.extra;
+                final dto = extra is ShortDeviceDto ? extra : null;
+                final deviceId = state.pathParameters['deviceId']!;
+                return DeviceDetailPage(deviceId: deviceId, initialDevice: dto);
+              },
+            ),
           ],
         ),
         StatefulShellBranch(
@@ -105,8 +129,10 @@ final GoRouter router = GoRouter(
               redirect: (context, state) {
                 final auth = Provider.of<AuthService>(context, listen: false);
                 final modal = Provider.of<ModalManager>(context, listen: false);
-                final redirectService =
-                    Provider.of<AuthRedirectService>(context, listen: false);
+                final redirectService = Provider.of<AuthRedirectService>(
+                  context,
+                  listen: false,
+                );
 
                 if (!auth.isLoggedIn) {
                   redirectService.saveRedirect(state.matchedLocation);
@@ -154,7 +180,9 @@ final GoRouter router = GoRouter(
 );
 
 List<Widget> buildStickyMessages(
-    double kFABBottomOffset, double kMessagesWindowBottomOffset) {
+  double kFABBottomOffset,
+  double kMessagesWindowBottomOffset,
+) {
   return [
     // Floating button
     Positioned(
@@ -187,36 +215,37 @@ List<Widget> buildStickyMessages(
                 ),
               ),
               Positioned(
-                  right: kFABBottomOffset,
-                  bottom: kMessagesWindowBottomOffset + 64,
-                  child: Material(
-                    elevation: 8,
+                right: kFABBottomOffset,
+                bottom: kMessagesWindowBottomOffset + 64,
+                child: Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(12),
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 300,
-                            height: 400,
-                            color: Colors.white,
-                            child: const MessagesPage(),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 300,
+                          height: 400,
+                          color: Colors.white,
+                          child: const MessagesPage(),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'Закрыть',
+                            onPressed: () {
+                              isMessagesWindowOpen.value = false;
+                            },
                           ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: IconButton(
-                              icon: const Icon(Icons.close),
-                              tooltip: 'Закрыть',
-                              onPressed: () {
-                                isMessagesWindowOpen.value = false;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  )),
+                  ),
+                ),
+              ),
             ],
           ),
         );
@@ -227,13 +256,14 @@ List<Widget> buildStickyMessages(
 
 /// Desktop version (wide screen)
 Widget buildDesktopScaffold(
-    BuildContext context,
-    StatefulNavigationShell navigationShell,
-    double contentWidth,
-    ColorScheme colorScheme,
-    AppState appState,
-    double height,
-    double kFooterHeight) {
+  BuildContext context,
+  StatefulNavigationShell navigationShell,
+  double contentWidth,
+  ColorScheme colorScheme,
+  AppState appState,
+  double height,
+  double kFooterHeight,
+) {
   final auth = Provider.of<AuthService>(context);
   final isLoggedIn = auth.isLoggedIn;
 
@@ -331,15 +361,25 @@ Widget buildMobileScaffold(
                   onTap: (index) => navigationShell.goBranch(index),
                   items: const [
                     BottomNavigationBarItem(
-                        icon: Icon(Icons.home), label: 'Home'),
+                      icon: Icon(Icons.home),
+                      label: 'Home',
+                    ),
                     BottomNavigationBarItem(
-                        icon: Icon(Icons.favorite), label: 'Favorites'),
+                      icon: Icon(Icons.favorite),
+                      label: 'Favorites',
+                    ),
                     BottomNavigationBarItem(
-                        icon: Icon(Icons.message), label: 'Messages'),
+                      icon: Icon(Icons.message),
+                      label: 'Messages',
+                    ),
                     BottomNavigationBarItem(
-                        icon: Icon(Icons.devices), label: 'Devices'),
+                      icon: Icon(Icons.devices),
+                      label: 'Devices',
+                    ),
                     BottomNavigationBarItem(
-                        icon: Icon(Icons.sell_rounded), label: 'Services'),
+                      icon: Icon(Icons.sell_rounded),
+                      label: 'Services',
+                    ),
                   ],
                 ),
               ),
@@ -350,8 +390,9 @@ Widget buildMobileScaffold(
 }
 
 int? _getSelectedIndex(BuildContext context) {
-  final location =
-      GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+  final location = GoRouter.of(
+    context,
+  ).routerDelegate.currentConfiguration.uri.path;
 
   switch (location) {
     case '/home':
@@ -369,6 +410,9 @@ int? _getSelectedIndex(BuildContext context) {
   }
 
   if (location.startsWith('/service/')) {
+    return 0;
+  }
+  if (location.startsWith('/device/')) {
     return 0;
   }
 

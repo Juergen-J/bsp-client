@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../model/attachment/attachment_dto.dart';
 import '../../model/attachment/image_attachment_dto.dart';
+import '../../model/device/short_device_dto.dart';
 import '../../model/service/service_attribute_dto.dart';
 import '../../model/service/user_service_full_dto.dart';
 import '../device_image_carousel.dart'; // путь поправь под свой проект
@@ -13,6 +14,7 @@ class ServiceFullDetailCard extends StatelessWidget {
   final VoidCallback? onFavorite;
   final String? priceUnit;
   final bool isFavorite;
+  final ValueChanged<ShortDeviceDto>? onDeviceTap;
 
   const ServiceFullDetailCard({
     super.key,
@@ -22,6 +24,7 @@ class ServiceFullDetailCard extends StatelessWidget {
     this.onFavorite,
     this.priceUnit,
     this.isFavorite = false,
+    this.onDeviceTap,
   });
 
   @override
@@ -40,9 +43,7 @@ class ServiceFullDetailCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: 0.25),
-          ),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
           boxShadow: [
             BoxShadow(
               color: cs.shadow.withValues(alpha: 0.05),
@@ -85,19 +86,20 @@ class ServiceFullDetailCard extends StatelessWidget {
                                   children: [
                                     Text(
                                       full.name,
-                                      style:
-                                          theme.textTheme.headlineSmall?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: cs.onSurface,
-                                      ),
+                                      style: theme.textTheme.headlineSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: cs.onSurface,
+                                          ),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
                                       price,
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: cs.primary,
-                                      ),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: cs.primary,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -113,7 +115,9 @@ class ServiceFullDetailCard extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 4),
                                   _DetailActionIcon(
-                                    icon: isFavorite ? Icons.star : Icons.star_border,
+                                    icon: isFavorite
+                                        ? Icons.star
+                                        : Icons.star_border,
                                     tooltip: 'Favorite',
                                     onTap: onFavorite,
                                     color: isFavorite ? cs.primary : null,
@@ -122,7 +126,8 @@ class ServiceFullDetailCard extends StatelessWidget {
                                   _DetailActionIcon(
                                     icon: Icons.close,
                                     tooltip: 'Close',
-                                    onTap: onClose ??
+                                    onTap:
+                                        onClose ??
                                         () => Navigator.of(context).maybePop(),
                                     forceEnabled: true,
                                   ),
@@ -171,19 +176,25 @@ class ServiceFullDetailCard extends StatelessWidget {
                   children: [
                     Text(
                       'Compatible Devices:',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: full.devices
-                          .map((d) => _TagPill(
-                                text: _s(d.name).isNotEmpty
-                                    ? _s(d.name)
-                                    : _s(d.deviceType.displayName),
-                              ))
+                          .map(
+                            (d) => _TagPill(
+                              text: _s(d.name).isNotEmpty
+                                  ? _s(d.name)
+                                  : _s(d.deviceType.displayName),
+                              onTap: onDeviceTap == null
+                                  ? null
+                                  : () => onDeviceTap!(d),
+                            ),
+                          )
                           .toList(),
                     ),
                   ],
@@ -274,21 +285,20 @@ class ServiceFullDetailCard extends StatelessWidget {
 class _TagPill extends StatelessWidget {
   final String text;
   final Color? color;
+  final VoidCallback? onTap;
 
-  const _TagPill({required this.text, this.color});
+  const _TagPill({required this.text, this.color, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    return Container(
+    final pill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color ?? cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
       ),
       child: Text(
         text,
@@ -296,6 +306,17 @@ class _TagPill extends StatelessWidget {
           color: cs.onSurfaceVariant,
           fontWeight: FontWeight.w500,
         ),
+      ),
+    );
+
+    if (onTap == null) return pill;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: pill,
       ),
     );
   }
@@ -320,8 +341,7 @@ class _DetailActionIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final enabled = forceEnabled || onTap != null;
-    final iconColor =
-        enabled ? (color ?? cs.outline) : cs.outlineVariant;
+    final iconColor = enabled ? (color ?? cs.outline) : cs.outlineVariant;
 
     final button = SizedBox(
       width: 30,

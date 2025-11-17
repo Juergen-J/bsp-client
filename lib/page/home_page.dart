@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../app/router.dart' show homeSearchQuery, homeSelectedCategoryId;
+import '../model/device/short_device_dto.dart';
 import '../model/service/user_service_short_dto.dart';
 import '../provider/messager_provider.dart';
 import '../widgets/cards/service_full_detail_card.dart';
@@ -194,8 +195,9 @@ class _HomePageState extends State<HomePage> {
       if (_currentDetailsRequestId != id) return;
       if (resp.statusCode == 200 && resp.data != null) {
         _safeSetState(() {
-          _selectedServiceFull =
-              UserServiceFullDto.fromJson(resp.data as Map<String, dynamic>);
+          _selectedServiceFull = UserServiceFullDto.fromJson(
+            resp.data as Map<String, dynamic>,
+          );
           _loadingDetails = false;
         });
       } else {
@@ -225,6 +227,15 @@ class _HomePageState extends State<HomePage> {
     if (currentPath != target) {
       router.go(target);
     }
+  }
+
+  void _openDeviceDetails(ShortDeviceDto device) {
+    final router = GoRouter.of(context);
+    router.pushNamed(
+      'deviceDetail',
+      pathParameters: {'deviceId': device.id},
+      extra: device,
+    );
   }
 
   void _clearSelectedService() {
@@ -268,12 +279,16 @@ class _HomePageState extends State<HomePage> {
 
   void _handleFavoriteTapById(String serviceId) {
     final current =
-        _favoriteOverrides[serviceId] ?? _favoriteFromResults(serviceId) ?? false;
+        _favoriteOverrides[serviceId] ??
+        _favoriteFromResults(serviceId) ??
+        false;
     unawaited(_toggleFavorite(serviceId, currentFavorite: current));
   }
 
-  Future<void> _toggleFavorite(String serviceId,
-      {required bool currentFavorite}) async {
+  Future<void> _toggleFavorite(
+    String serviceId, {
+    required bool currentFavorite,
+  }) async {
     if (_favoriteMutations.contains(serviceId)) return;
 
     final loggedIn = await requireLoginIfNeeded(context);
@@ -326,8 +341,9 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('Failed to update favorites. Please try again later.'),
+            content: Text(
+              'Failed to update favorites. Please try again later.',
+            ),
           ),
         );
       }
@@ -382,9 +398,9 @@ class _HomePageState extends State<HomePage> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_describeChatError(e))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_describeChatError(e))));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -414,7 +430,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _favoriteErrorMessage(DioException e, bool attemptedFavorite) {
-    final action = attemptedFavorite ? 'add to favorites' : 'remove from favorites';
+    final action = attemptedFavorite
+        ? 'add to favorites'
+        : 'remove from favorites';
     final data = e.response?.data;
     if (data is Map && data['message'] is String) {
       return data['message'] as String;
@@ -603,13 +621,15 @@ class _HomePageState extends State<HomePage> {
                   priceUnit: 'VB',
                   onClose: _clearSelectedService,
                   onMessage: () => _triggerConversationForOwner(
-                      _selectedServiceFull!.userId),
+                    _selectedServiceFull!.userId,
+                  ),
                   onFavorite: _selectedServiceId == null
                       ? null
                       : () => _handleFavoriteTapById(_selectedServiceId!),
                   isFavorite: _selectedServiceId != null
                       ? _isFavorite(_selectedServiceId!)
                       : false,
+                  onDeviceTap: _openDeviceDetails,
                 ),
               )
             else

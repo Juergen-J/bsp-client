@@ -130,13 +130,16 @@ class ModalOverlay extends StatelessWidget {
             : Stack(
                 key: ValueKey(modalType),
                 children: [
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                    child: Container(
-                      color: Colors.black.withOpacity(0.3),
+                  if (!isMobile) ...[
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        color: Colors.black.withOpacity(0.3),
+                      ),
                     ),
-                  ),
-                  Center(child: content),
+                    Center(child: content),
+                  ] else
+                    Positioned.fill(child: content!),
                 ],
               ),
       ),

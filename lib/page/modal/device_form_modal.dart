@@ -146,158 +146,215 @@ class _DeviceFormModalState extends State<DeviceFormModal> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    if (widget.isMobile) {
+      return Scaffold(
+        backgroundColor: cs.surface,
+        appBar: AppBar(
+          title: Text(
+            widget.editedDevice == null ? 'Gerät hinzufügen' : 'Gerät bearbeiten',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: widget.onClose,
+          ),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: _buildFormContent(context),
+        ),
+        bottomNavigationBar: (widget.readonly && widget.editedDevice == null)
+            ? null
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.editedDevice != null) ...[
+                        ElevatedButton(
+                          onPressed: () => deleteDeviceFromMyListAndClose(widget.editedDevice!.id),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Aus meiner Liste entfernen'),
+                        ),
+                        if (!widget.readonly) const SizedBox(height: 12),
+                      ],
+                      if (!widget.readonly)
+                        ElevatedButton(
+                          onPressed: () {
+                            if (selectedModel != null) {
+                              addDeviceToMyListAndClose(selectedModel!.id);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                          ),
+                          child: Text(widget.editedDevice != null
+                              ? 'Speichern'
+                              : 'Zu meiner Liste hinzufügen'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+      );
+    }
+
     return BaseModalWrapper(
       isMobile: widget.isMobile,
       onClose: widget.onClose,
       maxWidth: 800,
       builder: (context) => Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.editedDevice == null
-                    ? 'Gerät hinzufügen'
-                    : 'Gerät bearbeiten',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<DeviceType>(
-                decoration: const InputDecoration(labelText: "Gerätetyp"),
-                items: deviceTypeList
-                    .map((dt) => DropdownMenuItem(
-                        value: dt, child: Text(dt.displayName)))
-                    .toList(),
-                value: selectedDeviceType,
-                onChanged: widget.readonly
-                    ? null
-                    : (newValue) {
-                        setState(() {
-                          selectedDeviceType = newValue;
-                          selectedBrand = null;
-                          selectedModel = null;
-                          brandList.clear();
-                          deviceList.clear();
-                          deviceName = '';
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              widget.editedDevice == null ? 'Gerät hinzufügen' : 'Gerät bearbeiten',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            _buildFormContent(context),
+            const SizedBox(height: 24),
+            widget.editedDevice != null
+                ? ElevatedButton(
+                    onPressed: () {
+                      deleteDeviceFromMyListAndClose(widget.editedDevice!.id);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Aus meiner Liste entfernen'),
+                  )
+                : ElevatedButton(
+                    onPressed: () {
+                      if (selectedModel != null) {
+                        addDeviceToMyListAndClose(selectedModel!.id);
+                      }
+                    },
+                    child: const Text('Zu meiner Liste hinzufügen'),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormContent(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButtonFormField<DeviceType>(
+            decoration: const InputDecoration(labelText: "Gerätetyp"),
+            items: deviceTypeList
+                .map((dt) => DropdownMenuItem(value: dt, child: Text(dt.displayName)))
+                .toList(),
+            value: selectedDeviceType,
+            onChanged: widget.readonly
+                ? null
+                : (newValue) {
+                    setState(() {
+                      selectedDeviceType = newValue;
+                      selectedBrand = null;
+                      selectedModel = null;
+                      brandList.clear();
+                      deviceList.clear();
+                      deviceName = '';
+                      parameters.clear();
+                    });
+                    if (newValue != null) fetchBrands(newValue.id);
+                  },
+          ),
+          const SizedBox(height: 16),
+          if (selectedDeviceType != null)
+            DropdownButtonFormField<Brand>(
+              decoration: const InputDecoration(labelText: "Marke"),
+              items: brandList
+                  .map((b) => DropdownMenuItem(value: b, child: Text(b.name)))
+                  .toList(),
+              value: selectedBrand,
+              onChanged: widget.readonly
+                  ? null
+                  : (newValue) {
+                      setState(() {
+                        selectedBrand = newValue;
+                        selectedModel = null;
+                        deviceList.clear();
+                        deviceName = newValue?.name ?? '';
+                        parameters.clear();
+                      });
+                      if (newValue != null) fetchDevicesByBrand(selectedDeviceType!.id, newValue.id);
+                    },
+            ),
+          const SizedBox(height: 16),
+          if (selectedBrand != null && deviceList.isNotEmpty)
+            DropdownButtonFormField<ShortDeviceDto>(
+              decoration: const InputDecoration(labelText: "Modell"),
+              items: deviceList
+                  .map((d) => DropdownMenuItem(value: d, child: Text(d.name)))
+                  .toList(),
+              value: selectedModel,
+              onChanged: widget.readonly
+                  ? null
+                  : (newValue) {
+                      setState(() {
+                        selectedModel = newValue;
+                        if (newValue != null) {
+                          deviceName = '${selectedBrand!.name} ${newValue.name}';
+                          parameters = newValue.attributes
+                              .map((a) => MapEntry(a.propertyName, a.value))
+                              .toList();
+                        } else {
+                          deviceName = selectedBrand?.name ?? '';
                           parameters.clear();
-                        });
-                        if (newValue != null) fetchBrands(newValue.id);
-                      },
-              ),
-              const SizedBox(height: 16),
-              if (selectedDeviceType != null)
-                DropdownButtonFormField<Brand>(
-                  decoration: const InputDecoration(labelText: "Marke"),
-                  items: brandList
-                      .map((b) =>
-                          DropdownMenuItem(value: b, child: Text(b.name)))
-                      .toList(),
-                  value: selectedBrand,
-                  onChanged: widget.readonly
-                      ? null
-                      : (newValue) {
-                          setState(() {
-                            selectedBrand = newValue;
-                            selectedModel = null;
-                            deviceList.clear();
-                            deviceName = newValue?.name ?? '';
-                            parameters.clear();
-                          });
-                          if (newValue != null)
-                            fetchDevicesByBrand(
-                                selectedDeviceType!.id, newValue.id);
-                        },
-                ),
-              const SizedBox(height: 16),
-              if (selectedBrand != null && deviceList.isNotEmpty)
-                DropdownButtonFormField<ShortDeviceDto>(
-                  decoration: const InputDecoration(labelText: "Modell"),
-                  items: deviceList
-                      .map((d) =>
-                          DropdownMenuItem(value: d, child: Text(d.name)))
-                      .toList(),
-                  value: selectedModel,
-                  onChanged: widget.readonly
-                      ? null
-                      : (newValue) {
-                          setState(() {
-                            selectedModel = newValue;
-                            if (newValue != null) {
-                              deviceName =
-                                  '${selectedBrand!.name} ${newValue.name}';
-                              parameters = newValue.attributes
-                                  .map((a) => MapEntry(a.propertyName, a.value))
-                                  .toList();
-                            } else {
-                              deviceName = selectedBrand?.name ?? '';
-                              parameters.clear();
-                            }
-                          });
-                        },
-                ),
-              const SizedBox(height: 16),
-              if (selectedModel?.attachments.isNotEmpty == true)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Bilder",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    DeviceImageCarousel(
-                      imageIds: selectedModel!.attachments
-                          .map(
-                              (a) => (a.details as ImageAttachmentDto).normalId)
-                          .toList(),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              const Text("Technische Daten",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(2),
-                  1: FlexColumnWidth(3),
-                },
-                children: [
-                  for (final entry in parameters)
-                    TableRow(children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Text(entry.key,
-                            style: TextStyle(fontWeight: FontWeight.w500)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Text(entry.value),
-                      ),
-                    ]),
-                ],
-              ),
-              const SizedBox(height: 24),
-              widget.editedDevice != null
-                  ? ElevatedButton(
-                      onPressed: () {
-                        deleteDeviceFromMyListAndClose(widget.editedDevice!.id);
-                      },
-                      style:
-                          ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text('Aus meiner Liste entfernen'),
-                    )
-                  : ElevatedButton(
-                      onPressed: () {
-                        if (selectedModel != null) {
-                          addDeviceToMyListAndClose(selectedModel!.id);
                         }
-                      },
-                      child: const Text('Zu meiner Liste hinzufügen'),
-                    ),
+                      });
+                    },
+            ),
+          const SizedBox(height: 16),
+          if (selectedModel?.attachments.isNotEmpty == true)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Bilder", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                DeviceImageCarousel(
+                  imageIds: selectedModel!.attachments
+                      .map((a) => (a.details as ImageAttachmentDto).normalId)
+                      .toList(),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
+          const Text("Technische Daten", style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Table(
+            columnWidths: const {
+              0: FlexColumnWidth(2),
+              1: FlexColumnWidth(3),
+            },
+            children: [
+              for (final entry in parameters)
+                TableRow(children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w500)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(entry.value),
+                  ),
+                ]),
             ],
           ),
-        ),
+        ],
       ),
     );
   }

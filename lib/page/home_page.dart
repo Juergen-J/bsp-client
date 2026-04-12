@@ -585,51 +585,57 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ] else ...[
-            const SizedBox(height: 12),
             if (_loadingDetails)
-              const Center(child: CircularProgressIndicator())
+              const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_detailsError != null)
-              Column(
-                children: [
-                  Text(
-                    _detailsError!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
+              Expanded(
+                child: Center(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      OutlinedButton(
-                        onPressed: _clearSelectedService,
-                        child: const Text('Back'),
+                      Text(
+                        _detailsError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: _retryLoadSelectedService,
-                        child: const Text('Retry'),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton(
+                            onPressed: _clearSelectedService,
+                            child: const Text('Back'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: _retryLoadSelectedService,
+                            child: const Text('Retry'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               )
             else if (_selectedServiceFull != null)
-              SingleChildScrollView(
-                child: ServiceFullDetailCard(
-                  full: _selectedServiceFull!,
-                  priceUnit: 'VB',
-                  onClose: _clearSelectedService,
-                  onMessage: () => _triggerConversationForOwner(
-                    _selectedServiceFull!.userId,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: ServiceFullDetailCard(
+                    full: _selectedServiceFull!,
+                    priceUnit: 'VB',
+                    onClose: _clearSelectedService,
+                    onMessage: () => _triggerConversationForOwner(
+                      _selectedServiceFull!.userId,
+                    ),
+                    onFavorite: _selectedServiceId == null
+                        ? null
+                        : () => _handleFavoriteTapById(_selectedServiceId!),
+                    isFavorite: _selectedServiceId != null
+                        ? _isFavorite(_selectedServiceId!)
+                        : false,
+                    onDeviceTap: _openDeviceDetails,
                   ),
-                  onFavorite: _selectedServiceId == null
-                      ? null
-                      : () => _handleFavoriteTapById(_selectedServiceId!),
-                  isFavorite: _selectedServiceId != null
-                      ? _isFavorite(_selectedServiceId!)
-                      : false,
-                  onDeviceTap: _openDeviceDetails,
                 ),
               )
             else

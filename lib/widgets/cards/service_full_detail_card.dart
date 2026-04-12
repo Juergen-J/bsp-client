@@ -37,184 +37,285 @@ class ServiceFullDetailCard extends StatelessWidget {
     final addrStr = _formatAddress(full);
     final hasAddress = addrStr.isNotEmpty;
 
-    return SizedBox(
-      width: double.infinity,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.25)),
-          boxShadow: [
-            BoxShadow(
-              color: cs.shadow.withValues(alpha: 0.05),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 720;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
 
-              // ===== Верхняя часть =====
-              Widget top() {
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ---- Левая колонка: галерея ----
-                    SizedBox(
-                      width: compact ? 260 : 320,
-                      child: DeviceImageCarousel(
-                        imageIds: _imageIdsFromAttachments(full.attachments),
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-
-                    // ---- Правая колонка: данные ----
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      full.name,
-                                      style: theme.textTheme.headlineSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            color: cs.onSurface,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      price,
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: cs.primary,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _DetailActionIcon(
-                                    icon: Icons.chat_bubble_outline,
-                                    tooltip: 'Message',
-                                    onTap: onMessage,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  _DetailActionIcon(
-                                    icon: isFavorite
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    tooltip: 'Favorite',
-                                    onTap: onFavorite,
-                                    color: isFavorite ? cs.primary : null,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  _DetailActionIcon(
-                                    icon: Icons.close,
-                                    tooltip: 'Close',
-                                    onTap:
-                                        onClose ??
-                                        () => Navigator.of(context).maybePop(),
-                                    forceEnabled: true,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Теги и адрес
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ...allTags.take(4).map((t) => _TagPill(text: t)),
-                              if (hasAddress)
-                                _TagPill(
-                                  text: addrStr,
-                                  color: cs.secondaryContainer,
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
+        return Container(
+          width: double.infinity,
+          decoration: isMobile
+              ? BoxDecoration(color: cs.surface)
+              : BoxDecoration(
+                  color: cs.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.25)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: cs.shadow.withValues(alpha: 0.05),
+                      blurRadius: 24,
+                      offset: const Offset(0, 12),
                     ),
                   ],
-                );
-              }
+                ),
+          child: isMobile
+              ? _buildMobileContent(
+                  context, theme, cs, price, allTags, addrStr, hasAddress)
+              : _buildDesktopContent(
+                  context, theme, cs, price, allTags, addrStr, hasAddress),
+        );
+      },
+    );
+  }
 
-              // ===== Средняя часть =====
-              Widget middle() {
-                return Text(
-                  full.description,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                );
-              }
+  Widget _buildMobileContent(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme cs,
+    String price,
+    List<String> allTags,
+    String addrStr,
+    bool hasAddress,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // --- Sticky Actions at top ---
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: cs.surface.withValues(alpha: 0.9),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _DetailActionIcon(
+                icon: Icons.chat_bubble_outline,
+                tooltip: 'Message',
+                onTap: onMessage,
+                color: cs.primary,
+              ),
+              const SizedBox(width: 12),
+              _DetailActionIcon(
+                icon: isFavorite ? Icons.star : Icons.star_border,
+                tooltip: 'Favorite',
+                onTap: onFavorite,
+                color: isFavorite ? cs.primary : null,
+              ),
+              const SizedBox(width: 12),
+              _DetailActionIcon(
+                icon: Icons.close,
+                tooltip: 'Close',
+                onTap: onClose ?? () => Navigator.of(context).maybePop(),
+                forceEnabled: true,
+              ),
+            ],
+          ),
+        ),
 
-              // ===== Нижняя часть =====
-              Widget bottom() {
-                if (full.devices.isEmpty) return const SizedBox.shrink();
-                return Column(
+        // --- Gallery (Full Width) ---
+        SizedBox(
+          width: double.infinity,
+          height: 250,
+          child: DeviceImageCarousel(
+            imageIds: _imageIdsFromAttachments(full.attachments),
+          ),
+        ),
+
+        // --- Content ---
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                full.name,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                price,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ...allTags.take(6).map((t) => _TagPill(text: t)),
+                  if (hasAddress)
+                    _TagPill(
+                      text: addrStr,
+                      color: cs.secondaryContainer,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                full.description,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildDevicesList(theme),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopContent(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme cs,
+    String price,
+    List<String> allTags,
+    String addrStr,
+    bool hasAddress,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Gallery
+              SizedBox(
+                width: 320,
+                child: DeviceImageCarousel(
+                  imageIds: _imageIdsFromAttachments(full.attachments),
+                ),
+              ),
+              const SizedBox(width: 24),
+              // Data
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Compatible Devices:',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                full.name,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                price,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _DetailActionIcon(
+                              icon: Icons.chat_bubble_outline,
+                              tooltip: 'Message',
+                              onTap: onMessage,
+                            ),
+                            const SizedBox(width: 4),
+                            _DetailActionIcon(
+                              icon: isFavorite ? Icons.star : Icons.star_border,
+                              tooltip: 'Favorite',
+                              onTap: onFavorite,
+                              color: isFavorite ? cs.primary : null,
+                            ),
+                            const SizedBox(width: 4),
+                            _DetailActionIcon(
+                              icon: Icons.close,
+                              tooltip: 'Close',
+                              onTap: onClose ??
+                                  () => Navigator.of(context).maybePop(),
+                              forceEnabled: true,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: full.devices
-                          .map(
-                            (d) => _TagPill(
-                              text: _s(d.name).isNotEmpty
-                                  ? _s(d.name)
-                                  : _s(d.deviceType.displayName),
-                              onTap: onDeviceTap == null
-                                  ? null
-                                  : () => onDeviceTap!(d),
-                            ),
-                          )
-                          .toList(),
+                      children: [
+                        ...allTags.take(4).map((t) => _TagPill(text: t)),
+                        if (hasAddress)
+                          _TagPill(
+                            text: addrStr,
+                            color: cs.secondaryContainer,
+                          ),
+                      ],
                     ),
                   ],
-                );
-              }
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            full.description,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: cs.onSurfaceVariant,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 28),
+          _buildDevicesList(theme),
+        ],
+      ),
+    );
+  }
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  top(),
-                  const SizedBox(height: 24),
-                  middle(),
-                  const SizedBox(height: 28),
-                  bottom(),
-                ],
-              );
-            },
+  Widget _buildDevicesList(ThemeData theme) {
+    if (full.devices.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Compatible Devices:',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
         ),
-      ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: full.devices
+              .map(
+                (d) => _TagPill(
+                  text: _s(d.name).isNotEmpty
+                      ? _s(d.name)
+                      : _s(d.deviceType.displayName),
+                  onTap: onDeviceTap == null ? null : () => onDeviceTap!(d),
+                ),
+              )
+              .toList(),
+        ),
+      ],
     );
   }
 

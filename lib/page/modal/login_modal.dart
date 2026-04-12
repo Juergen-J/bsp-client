@@ -100,7 +100,7 @@ class _LoginModalState extends State<LoginModal> {
                 style: textTheme.titleLarge,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Center(
               child: Text(
                 'Logge dich ein, um gebrauchte Schätze zu finden\nund zu verkaufen.',
@@ -108,7 +108,7 @@ class _LoginModalState extends State<LoginModal> {
                 textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             InputModalField(
               controller: _emailController,
               label: 'E-Mail',
@@ -131,7 +131,7 @@ class _LoginModalState extends State<LoginModal> {
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             if (_incorrectCredentials)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -140,7 +140,7 @@ class _LoginModalState extends State<LoginModal> {
                   style: TextStyle(color: colorScheme.error),
                 ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -164,10 +164,10 @@ class _LoginModalState extends State<LoginModal> {
                 Text(' dein Konto.', style: textTheme.labelSmall),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -192,7 +192,7 @@ class _LoginModalState extends State<LoginModal> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Center(
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,

@@ -420,97 +420,202 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
     }
   }
 
+  Future<void> _deleteService(
+      BuildContext context, UserServiceFullDto currentService) async {
+    final dio = Provider.of<AuthService>(context, listen: false).dio;
+    try {
+      await dio.delete('/v1/service/${currentService.id}');
+      if (widget.completer != null && !widget.completer!.isCompleted) {
+        widget.completer!.complete(true);
+      }
+      widget.onFinish?.call(true);
+      widget.onClose();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting service: $e')),
+      );
+    }
+  }
+
+  Widget _buildFormContent(BuildContext context) {
+    final currentService = service!;
+    final theme = Theme.of(context);
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildReadOnlyField('Name', currentService.name),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _descriptionCtrl,
+            maxLines: 4,
+            maxLength: _descriptionMaxLength,
+            maxLengthEnforcement: MaxLengthEnforcement.enforced,
+            decoration: const InputDecoration(labelText: 'Description'),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Description is required';
+              }
+              if (value.length > _descriptionMaxLength) {
+                return 'Description can be at most 5000 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          _buildPriceSection(theme),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          _buildAddressSection(theme),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          _buildAttributesSection(theme),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          _buildAttachmentsSection(context, currentService),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return widget.isMobile
+          ? Scaffold(
+              appBar: AppBar(title: const Text('Edit service')),
+              body: const Center(child: CircularProgressIndicator()),
+            )
+          : BaseModalWrapper(
+              isMobile: widget.isMobile,
+              onClose: widget.onClose,
+              builder: (context) => const SizedBox(
+                height: 200,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            );
+    }
+
+    if (service == null) {
+      return widget.isMobile
+          ? Scaffold(
+              appBar: AppBar(title: const Text('Edit service')),
+              body: const Center(child: Text('Service not found')),
+            )
+          : BaseModalWrapper(
+              isMobile: widget.isMobile,
+              onClose: widget.onClose,
+              builder: (context) => const SizedBox(
+                height: 200,
+                child: Center(child: Text('Service not found')),
+              ),
+            );
+    }
+
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final currentService = service!;
+
+    if (widget.isMobile) {
+      return Scaffold(
+        backgroundColor: cs.surface,
+        appBar: AppBar(
+          title: Text(
+            'Edit service',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: widget.onClose,
+          ),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: _buildFormContent(context),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  onPressed: () => _deleteService(context, currentService),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Delete'),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _isSaving ? null : _saveChanges,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('Save changes'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return BaseModalWrapper(
       isMobile: widget.isMobile,
       onClose: widget.onClose,
       maxWidth: 840,
-      builder: (context) {
-        if (isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (service == null) {
-          return const Center(child: Text('Service not found'));
-        }
-        return _buildForm(context);
-      },
-    );
-  }
-
-  Widget _buildForm(BuildContext context) {
-    final currentService = service!;
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Edit service', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 24),
-              _buildReadOnlyField('Name', currentService.name),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionCtrl,
-                maxLines: 4,
-                maxLength: _descriptionMaxLength,
-                maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                decoration: const InputDecoration(labelText: 'Description'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Description is required';
-                  }
-                  if (value.length > _descriptionMaxLength) {
-                    return 'Description can be at most 5000 characters';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 16),
-              _buildPriceSection(theme),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 16),
-              _buildAddressSection(theme),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 16),
-              _buildAttributesSection(theme),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 16),
-              _buildAttachmentsSection(context, currentService),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _saveChanges,
-                      child: _isSaving
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Text('Save changes'),
-                    ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Edit service', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 24),
+            Flexible(child: SingleChildScrollView(child: _buildFormContent(context))),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _saveChanges,
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text('Save changes'),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildDeleteButton(context, currentService),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildDeleteButton(context, currentService),
+          ],
         ),
       ),
     );
@@ -915,23 +1020,7 @@ class _ServiceEditFormModalState extends State<ServiceEditFormModal> {
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: () async {
-              final dio = Provider.of<AuthService>(context, listen: false).dio;
-              try {
-                await dio.delete('/v1/service/${currentService.id}');
-                if (widget.completer != null &&
-                    !widget.completer!.isCompleted) {
-                  widget.completer!.complete(true);
-                }
-                widget.onFinish?.call(true);
-                widget.onClose();
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error deleting service: $e')),
-                );
-              }
-            },
+            onPressed: () => _deleteService(context, currentService),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),
           ),

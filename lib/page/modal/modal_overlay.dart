@@ -9,9 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../model/device/short_device_dto.dart';
+import '../../service/document_service.dart';
 import 'device_form_modal.dart';
 import 'forgot_password_modal.dart';
 import 'login_modal.dart';
+import 'document_modal.dart';
 import 'modal_service.dart';
 import 'modal_type.dart';
 
@@ -21,74 +23,107 @@ class ModalOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final modalManager = Provider.of<ModalManager>(context);
-    final modalType = modalManager.currentModal;
+    final stack = modalManager.stack;
     final isMobile = MediaQuery.of(context).size.width < 600;
 
+    if (stack.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Stack(
+      children: stack.map<Widget>((entry) {
+        return _ModalItem(
+          key: ObjectKey(entry),
+          entry: entry,
+          isMobile: isMobile,
+          onClose: modalManager.close,
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _ModalItem extends StatelessWidget {
+  final ModalEntry entry;
+  final bool isMobile;
+  final VoidCallback onClose;
+
+  const _ModalItem({
+    super.key,
+    required this.entry,
+    required this.isMobile,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     Widget? content;
-    switch (modalType) {
+
+    switch (entry.type) {
       case ModalType.login:
         content = LoginModal(
-          onClose: modalManager.close,
+          onClose: onClose,
           isMobile: isMobile,
         );
         break;
       case ModalType.register:
         content = RegisterModal(
-          onClose: modalManager.close,
+          onClose: onClose,
           isMobile: isMobile,
         );
         break;
       case ModalType.forgotPassword:
-        content = ForgotPasswordModal(
-            onClose: modalManager.close, isMobile: isMobile);
+        content = ForgotPasswordModal(onClose: onClose, isMobile: isMobile);
         break;
       case ModalType.verifyEmail:
         content = VerifyEmailModal(
-          onClose: modalManager.close,
+          onClose: onClose,
           isMobile: isMobile,
-          email: modalManager.data as String? ?? '',
+          email: entry.data as String? ?? '',
         );
         break;
       case ModalType.deviceForm:
-        final data = modalManager.data as Map?;
+        final data = entry.data as Map?;
         content = DeviceFormModal(
           onClose: () {
-            modalManager.close();
+            onClose();
             final completer = data?['completer'] as Completer?;
-            completer?.complete(false); // Standard beim Schließen
+            completer?.complete(false);
           },
           isMobile: isMobile,
           editedDevice: data?['device'] as ShortDeviceDto?,
           readonly: data?['readonly'] == true,
           onFinish: (bool success) {
-            modalManager.close();
+            onClose();
             final completer = data?['completer'] as Completer?;
             completer?.complete(success);
           },
         );
+        break;
       case ModalType.serviceCreateForm:
-        final data = modalManager.data as Map?;
+        final data = entry.data as Map?;
         content = ServiceCreateFormModal(
           onClose: () {
-            modalManager.close();
+            onClose();
             final completer = data?['completer'] as Completer?;
             completer?.complete(false);
           },
           isMobile: isMobile,
           onFinish: (bool success) {
-            modalManager.close();
+            onClose();
             final completer = data?['completer'] as Completer?;
             completer?.complete(success);
           },
         );
+        break;
       case ModalType.serviceEditForm:
-        final data = modalManager.data as Map?;
+        final data = entry.data as Map?;
         final serviceId = data?['serviceId'] as String? ?? '';
         final completer = data?['completer'] as Completer<bool>?;
         if (serviceId.isNotEmpty) {
           content = ServiceEditFormModal(
             onClose: () {
-              modalManager.close();
+              onClose();
               if (completer != null && !completer.isCompleted) {
                 completer.complete(false);
               }
@@ -96,7 +131,7 @@ class ModalOverlay extends StatelessWidget {
             isMobile: isMobile,
             serviceId: serviceId,
             onFinish: (bool success) {
-              modalManager.close();
+              onClose();
               if (completer != null && !completer.isCompleted) {
                 completer.complete(success);
               }
@@ -105,41 +140,31 @@ class ModalOverlay extends StatelessWidget {
         } else {
           content = const Center(child: Text("Invalid service ID"));
         }
+        break;
+      case ModalType.document:
+        final type = entry.data as StaticDocumentType?;
+        if (type != null) {
+          content = DocumentModal(
+            documentType: type,
+            onClose: onClose,
+            isMobile: isMobile,
+          );
+        }
+        break;
       default:
         content = null;
     }
 
-    return IgnorePointer(
-      ignoring: modalType == null,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.05),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: modalType == null
-            ? const SizedBox.shrink()
-            : Stack(
-                key: ValueKey(modalType),
-                children: [
-                  BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                    child: Container(
-                      color: Colors.black.withOpacity(0.3),
-                    ),
-                  ),
-                  Center(child: content),
-                ],
-              ),
-      ),
+    return Stack(
+      children: [
+        BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Container(
+            color: Colors.black.withOpacity(0.3),
+          ),
+        ),
+        Center(child: content),
+      ],
     );
   }
 }

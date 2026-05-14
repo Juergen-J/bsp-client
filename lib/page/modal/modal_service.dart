@@ -1,23 +1,36 @@
 import 'package:flutter/material.dart';
 import 'modal_type.dart';
 
+class ModalEntry {
+  final ModalType type;
+  final dynamic data;
+
+  ModalEntry(this.type, this.data);
+}
+
 class ModalManager extends ChangeNotifier {
-  ModalType? _currentModal;
-  dynamic _data;
+  final List<ModalEntry> _stack = [];
 
-  ModalType? get currentModal => _currentModal;
+  List<ModalEntry> get stack => List.unmodifiable(_stack);
 
-  dynamic get data => _data;
+  ModalType? get currentModal => _stack.isNotEmpty ? _stack.last.type : null;
+
+  dynamic get data => _stack.isNotEmpty ? _stack.last.data : null;
 
   void show(ModalType modal, {dynamic data}) {
-    _currentModal = modal;
-    _data = data;
+    _stack.add(ModalEntry(modal, data));
     notifyListeners();
   }
 
   void close() {
-    _currentModal = null;
-    _data = null;
+    if (_stack.isNotEmpty) {
+      _stack.removeLast();
+      notifyListeners();
+    }
+  }
+
+  void closeAll() {
+    _stack.clear();
     notifyListeners();
   }
 }

@@ -35,7 +35,9 @@ class BaseModalWrapper extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Container(
                   width: modalWidth,
-                  padding: appState.modalPadding,
+                  padding: isMobile
+                      ? const EdgeInsets.symmetric(horizontal: 20, vertical: 20)
+                      : appState.modalPadding,
                   decoration: appState.modalDecoration,
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -98,9 +100,9 @@ class InputModalField extends StatelessWidget {
     final inputDecoration = ModalStyleProvider.of(context).inputFieldDecoration;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Container(
-        height: 60.0,
+        height: 54.0,
         decoration: inputDecoration.copyWith(
           color: inputDecoration.color,
           borderRadius: inputDecoration.borderRadius,
@@ -122,8 +124,8 @@ class InputModalField extends StatelessWidget {
             onFieldSubmitted: onFieldSubmitted,
             decoration: InputDecoration(
               isDense: true,
-              labelText: label,
-              labelStyle: TextStyle(color: colorScheme.onSurface),
+              hintText: label,
+              hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.6)),
               prefixIcon: toggleObscure == null && icon != null
                   ? Icon(icon, color: colorScheme.onSurface)
                   : null,
@@ -139,7 +141,7 @@ class InputModalField extends StatelessWidget {
               errorStyle: const TextStyle(height: 1.2, color: Colors.red),
               border: InputBorder.none,
               contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
             ),
           ),
         ),

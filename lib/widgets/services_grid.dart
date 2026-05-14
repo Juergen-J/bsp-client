@@ -23,7 +23,8 @@ class ServicesGrid extends StatelessWidget {
         final isTwoCols = constraints.maxWidth >= 800;
         final crossAxisCount = isTwoCols ? 2 : 1;
 
-        final aspect = isTwoCols ? 3.0 : 3.0;
+        // На мобилках (1 колонка) даем больше высоты, уменьшая aspect ratio
+        final aspect = isTwoCols ? 3.0 : 2.0;
 
         return GridView.builder(
           primary: false,

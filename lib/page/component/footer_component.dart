@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../modal/modal_service.dart';
+import '../modal/modal_type.dart';
+import '../../service/document_service.dart';
 
 class FooterComponent extends StatelessWidget {
   final double contentWidth;
@@ -95,8 +99,22 @@ class FooterComponent extends StatelessWidget {
           decoration: TextDecoration.underline,
         );
 
+    StaticDocumentType? type;
+    if (label == "Impressum") {
+      type = StaticDocumentType.impressum;
+    } else if (label == "Datenschutzerklärung") {
+      type = StaticDocumentType.privacyPolicy;
+    } else if (label == "AGB") {
+      type = StaticDocumentType.termsAndConditions;
+    }
+
     return TextButton(
-      onPressed: () {},
+      onPressed: type == null
+          ? null
+          : () {
+              Provider.of<ModalManager>(context, listen: false)
+                  .show(ModalType.document, data: type);
+            },
       style: TextButton.styleFrom(
         foregroundColor: Colors.white70,
         padding: EdgeInsets.zero,

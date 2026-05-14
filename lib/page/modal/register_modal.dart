@@ -1,7 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../service/auth_service.dart';
+import '../../service/document_service.dart';
 import 'base_modal_wrapper.dart';
 import 'modal_service.dart';
 import 'modal_type.dart';
@@ -37,6 +39,7 @@ class _RegisterModalState extends State<RegisterModal> {
   bool _emailExists = false;
   bool _obscurePassword = true;
   bool _obscurePasswordConfirm = true;
+  bool _acceptedTerms = false;
 
   void _submit() async {
     FocusScope.of(context).unfocus();
@@ -163,18 +166,103 @@ class _RegisterModalState extends State<RegisterModal> {
                 },
               ),
               const SizedBox(height: 16),
+              FormField<bool>(
+                initialValue: _acceptedTerms,
+                validator: (value) {
+                  if (value != true) {
+                    return 'Sie müssen den Bedingungen zustimmen';
+                  }
+                  return null;
+                },
+                builder: (state) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _acceptedTerms,
+                            onChanged: (value) {
+                              setState(() {
+                                _acceptedTerms = value ?? false;
+                              });
+                              state.didChange(value);
+                            },
+                          ),
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface,
+                                ),
+                                children: [
+                                  const TextSpan(text: 'Ich akzeptiere die '),
+                                  TextSpan(
+                                    text: 'AGB',
+                                    style: TextStyle(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        context.read<ModalManager>().show(
+                                          ModalType.document,
+                                          data: StaticDocumentType.termsAndConditions,
+                                        );
+                                      },
+                                  ),
+                                  const TextSpan(text: ' и '),
+                                  TextSpan(
+                                    text: 'Datenschutzerklärung',
+                                    style: TextStyle(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        context.read<ModalManager>().show(
+                                          ModalType.document,
+                                          data: StaticDocumentType.privacyPolicy,
+                                        );
+                                      },
+                                  ),
+                                  const TextSpan(text: '.'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (state.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Text(
+                            state.errorText!,
+                            style: TextStyle(
+                              color: colorScheme.error,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
+                    backgroundColor: _acceptedTerms ? colorScheme.primary : colorScheme.surfaceVariant,
+                    foregroundColor: _acceptedTerms ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(32),
                     ),
                   ),
-                  onPressed: _submit,
+                  onPressed: _acceptedTerms ? _submit : null,
                   child: const Text('Registrieren',
                       style: TextStyle(fontWeight: FontWeight.w600)),
                 ),

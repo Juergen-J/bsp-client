@@ -2,6 +2,7 @@ import 'package:berlin_service_portal/page/modal/modal_service.dart';
 import 'package:berlin_service_portal/provider/messager_provider.dart';
 import 'package:berlin_service_portal/service/auth_redirect_service.dart';
 import 'package:berlin_service_portal/service/auth_service.dart';
+import 'package:berlin_service_portal/service/document_service.dart';
 import 'package:berlin_service_portal/service/image_service.dart';
 import 'package:berlin_service_portal/service/favorite_service.dart';
 import 'package:flutter/foundation.dart';
@@ -78,6 +79,9 @@ void main() async {
         ),
         ProxyProvider<AuthService, ImageService>(
           update: (_, auth, __) => ImageService(dio: auth.dio),
+        ),
+        ProxyProvider<AuthService, DocumentService>(
+          update: (_, auth, __) => DocumentService(dio: auth.dio),
         ),
         ChangeNotifierProxyProvider<AuthService, FavoriteService>(
           create: (context) =>

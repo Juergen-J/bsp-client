@@ -275,364 +275,383 @@ class _ServiceCreateFormModalState extends State<ServiceCreateFormModal> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    if (widget.isMobile) {
+      return Scaffold(
+        backgroundColor: cs.surface,
+        appBar: AppBar(
+          title: Text(
+            'Add Service',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: widget.onClose,
+          ),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: _buildFormContent(context),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _handleSave,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+              ),
+              child: const Text('Save'),
+            ),
+          ),
+        ),
+      );
+    }
+
     return BaseModalWrapper(
       isMobile: widget.isMobile,
       onClose: widget.onClose,
       maxWidth: 800,
       builder: (context) => Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Add Service',
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add Service', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 24),
+            Flexible(child: SingleChildScrollView(child: _buildFormContent(context))),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _handleSave,
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                // NAME
-                TextFormField(
-                  initialValue: name,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Enter name' : null,
-                  onChanged: (v) => name = v,
+  Future<void> _handleSave() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final dio = Provider.of<AuthService>(context, listen: false).dio;
+
+    final mainAttachmentName = pickedImages.isNotEmpty ? pickedImages.first.name : '';
+
+    final normalizedAmount = priceAmount.replaceAll(',', '.');
+    final amountNum = num.parse(normalizedAmount);
+
+    address.postcode = int.tryParse(_postcodeCtrl.text.trim());
+    address.city = _cityCtrl.text.trim();
+    address.state = _stateCtrl.text.trim();
+    address.street1 = _street1Ctrl.text.trim();
+
+    final priceDto = PriceDto(
+      amountNum,
+      currencyCode,
+      currencyName,
+      negotiable,
+    );
+
+    final collectedAttrs = _collectAttributes();
+
+    final newService = NewUserServiceDto(
+      serviceTypeId: selectedType!.id,
+      name: name,
+      description: description,
+      mainAttachment: mainAttachmentName,
+      devices: selectedDeviceIds,
+      price: priceDto,
+      attributes: collectedAttrs,
+      address: address,
+    );
+
+    final attachments = <MultipartFile>[];
+    for (final file in pickedImages) {
+      final bytes = await file.readAsBytes();
+      attachments.add(
+        MultipartFile.fromBytes(
+          bytes,
+          filename: file.name,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+    }
+
+    final formData = FormData.fromMap({
+      "data": MultipartFile.fromString(
+        jsonEncode(newService.toJson()),
+        filename: "data.json",
+        contentType: MediaType("application", "json"),
+      ),
+      "attachments": attachments,
+    });
+
+    try {
+      await dio.post('/v1/service/my', data: formData);
+      widget.onFinish?.call(true);
+      widget.onClose();
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error creating service: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating service: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildFormContent(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // NAME
+          TextFormField(
+            initialValue: name,
+            decoration: const InputDecoration(labelText: 'Name'),
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter name' : null,
+            onChanged: (v) => name = v,
+          ),
+          const SizedBox(height: 16),
+
+          // CATEGORY
+          DropdownButtonFormField<ShortServiceTypeDto>(
+            value: selectedType,
+            items: serviceTypes
+                .map((type) => DropdownMenuItem(
+                      value: type,
+                      child: Text(type.displayName),
+                    ))
+                .toList(),
+            onChanged: (v) => setState(() => selectedType = v),
+            decoration: const InputDecoration(labelText: 'Category'),
+            validator: (v) => v == null ? 'Select category' : null,
+          ),
+          const SizedBox(height: 16),
+
+          // PRICE
+          Text('Price', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  initialValue: priceAmount,
+                  decoration: const InputDecoration(labelText: 'Amount (e.g. 12.34)'),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter amount';
+                    final normalized = v.replaceAll(',', '.');
+                    final ok = RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(normalized);
+                    return ok ? null : 'Invalid amount format';
+                  },
+                  onChanged: (v) => priceAmount = v,
                 ),
-                const SizedBox(height: 16),
-
-                // CATEGORY
-                DropdownButtonFormField<ShortServiceTypeDto>(
-                  value: selectedType,
-                  items: serviceTypes
-                      .map((type) => DropdownMenuItem(
-                            value: type,
-                            child: Text(type.displayName),
-                          ))
-                      .toList(),
-                  onChanged: (v) => setState(() => selectedType = v),
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  validator: (v) => v == null ? 'Select category' : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<CurrencyDto>(
+                  value: selectedCurrency,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Currency'),
+                  items: currencies.map((c) {
+                    final symbol = NumberFormat.simpleCurrency(name: c.code).currencySymbol;
+                    return DropdownMenuItem(
+                      value: c,
+                      child: Text('$symbol ${c.name} — ${c.code}'),
+                    );
+                  }).toList(),
+                  selectedItemBuilder: (_) => currencies.map((c) {
+                    final symbol = NumberFormat.simpleCurrency(name: c.code).currencySymbol;
+                    return Align(alignment: Alignment.centerLeft, child: Text(symbol));
+                  }).toList(),
+                  onChanged: _isLoadingCurrencies
+                      ? null
+                      : (c) {
+                          if (c == null) return;
+                          setState(() {
+                            selectedCurrency = c;
+                            currencyCode = c.code;
+                            currencyName = c.name;
+                          });
+                        },
+                  validator: (v) => v == null ? 'Select currency' : null,
                 ),
-                const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          CheckboxListTile(
+            value: negotiable,
+            onChanged: (v) => setState(() => negotiable = v ?? false),
+            title: const Text('Negotiable'),
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+          ),
 
-                // PRICE
-                Text('Price', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Row(
+          // DESCRIPTION
+          TextFormField(
+            initialValue: description,
+            maxLines: 5,
+            maxLength: _descriptionMaxLength,
+            maxLengthEnforcement: MaxLengthEnforcement.enforced,
+            decoration: const InputDecoration(labelText: 'Description'),
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Enter description';
+              }
+              if (v.length > _descriptionMaxLength) {
+                return 'Description can be at most 5000 characters';
+              }
+              return null;
+            },
+            onChanged: (v) => description = v,
+          ),
+          const SizedBox(height: 24),
+
+          // IMAGES
+          Text('Images', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ImageUploadWidget(
+            onFilesPicked: (files) => setState(() => pickedImages = files),
+            initialFiles: pickedImages,
+          ),
+          const SizedBox(height: 24),
+
+          // ADDRESS
+          Text('Address', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+
+          SizedBox(
+            key: _zipTargetKey,
+            child: CompositedTransformTarget(
+              link: _zipFieldLink,
+              child: TextFormField(
+                controller: _postcodeCtrl,
+                focusNode: _postcodeFocus,
+                decoration: const InputDecoration(
+                  labelText: 'Postcode',
+                  hintText: 'Напр., 12305',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(signed: false),
+                validator: (v) {
+                  /* ... */
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          TextFormField(
+            controller: _cityCtrl,
+            decoration: const InputDecoration(labelText: 'City'),
+            onChanged: (v) => address.city = v,
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Введите город' : null,
+          ),
+          const SizedBox(height: 12),
+
+          TextFormField(
+            controller: _stateCtrl,
+            decoration: const InputDecoration(labelText: 'State/Region'),
+            onChanged: (v) => address.state = v,
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Введите регион/штат' : null,
+          ),
+          const SizedBox(height: 12),
+
+          TextFormField(
+            controller: _street1Ctrl,
+            focusNode: _street1Focus,
+            decoration: const InputDecoration(labelText: 'Street/No.'),
+            onChanged: (v) => address.street1 = v,
+          ),
+
+          // DEVICES
+          if (myDevices.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text('Linked devices (optional)', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ...myDevices.map((device) {
+              final isSelected = selectedDeviceIds.contains(device.id);
+              return CheckboxListTile(
+                value: isSelected,
+                onChanged: (v) {
+                  setState(() {
+                    if (v == true) {
+                      selectedDeviceIds.add(device.id);
+                    } else {
+                      selectedDeviceIds.remove(device.id);
+                    }
+                  });
+                },
+                title: Text(device.name),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+              );
+            }),
+          ],
+
+          const SizedBox(height: 24),
+
+          // ATTRIBUTES
+          Text('Attributes', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (_attrPropCtrls.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'No attributes. Add some if needed.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          Column(
+            children: List.generate(_attrPropCtrls.length, (i) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
+                      flex: 2,
                       child: TextFormField(
-                        initialValue: priceAmount,
-                        decoration: const InputDecoration(
-                            labelText: 'Amount (e.g. 12.34)'),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true, signed: false),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty)
-                            return 'Enter amount';
-                          final normalized = v.replaceAll(',', '.');
-                          final ok =
-                              RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(normalized);
-                          return ok ? null : 'Invalid amount format';
-                        },
-                        onChanged: (v) => priceAmount = v,
+                        controller: _attrPropCtrls[i],
+                        decoration: const InputDecoration(labelText: 'Property'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButtonFormField<CurrencyDto>(
-                        value: selectedCurrency,
-                        isExpanded: true,
-                        decoration:
-                            const InputDecoration(labelText: 'Currency'),
-                        items: currencies.map((c) {
-                          final symbol =
-                              NumberFormat.simpleCurrency(name: c.code)
-                                  .currencySymbol;
-                          return DropdownMenuItem(
-                            value: c,
-                            child: Text('$symbol ${c.name} — ${c.code}'),
-                          );
-                        }).toList(),
-                        selectedItemBuilder: (_) => currencies.map((c) {
-                          final symbol =
-                              NumberFormat.simpleCurrency(name: c.code)
-                                  .currencySymbol;
-                          return Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(symbol));
-                        }).toList(),
-                        onChanged: _isLoadingCurrencies
-                            ? null
-                            : (c) {
-                                if (c == null) return;
-                                setState(() {
-                                  selectedCurrency = c;
-                                  currencyCode = c.code;
-                                  currencyName = c.name;
-                                });
-                              },
-                        validator: (v) => v == null ? 'Select currency' : null,
+                      flex: 3,
+                      child: TextFormField(
+                        controller: _attrValCtrls[i],
+                        decoration: const InputDecoration(labelText: 'Value'),
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => _removeAttributeRow(i),
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Remove',
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  value: negotiable,
-                  onChanged: (v) => setState(() => negotiable = v ?? false),
-                  title: const Text('Negotiable'),
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-
-                // DESCRIPTION
-                TextFormField(
-                  initialValue: description,
-                  maxLines: 5,
-                  maxLength: _descriptionMaxLength,
-                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Enter description';
-                    }
-                    if (v.length > _descriptionMaxLength) {
-                      return 'Description can be at most 5000 characters';
-                    }
-                    return null;
-                  },
-                  onChanged: (v) => description = v,
-                ),
-                const SizedBox(height: 24),
-
-                // IMAGES
-                Text('Images', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                ImageUploadWidget(
-                  onFilesPicked: (files) =>
-                      setState(() => pickedImages = files),
-                  initialFiles: pickedImages,
-                ),
-                const SizedBox(height: 24),
-
-                // ADDRESS
-                Text('Address', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-
-                SizedBox(
-                  key: _zipTargetKey,
-                  child: CompositedTransformTarget(
-                    link: _zipFieldLink,
-                    child: TextFormField(
-                      controller: _postcodeCtrl,
-                      focusNode: _postcodeFocus,
-                      decoration: const InputDecoration(
-                        labelText: 'Postcode',
-                        hintText: 'Напр., 12305',
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(signed: false),
-                      validator: (v) {
-                        /* ... */
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                TextFormField(
-                  controller: _cityCtrl,
-                  decoration: const InputDecoration(labelText: 'City'),
-                  onChanged: (v) => address.city = v,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Введите город' : null,
-                ),
-                const SizedBox(height: 12),
-
-                TextFormField(
-                  controller: _stateCtrl,
-                  decoration: const InputDecoration(labelText: 'State/Region'),
-                  onChanged: (v) => address.state = v,
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Введите регион/штат'
-                      : null,
-                ),
-                const SizedBox(height: 12),
-
-                TextFormField(
-                  controller: _street1Ctrl,
-                  focusNode: _street1Focus,
-                  decoration: const InputDecoration(labelText: 'Street/No.'),
-                  onChanged: (v) => address.street1 = v,
-                ),
-
-                // DEVICES
-                if (myDevices.isNotEmpty) ...[
-                  Text('Linked devices (optional)',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  ...myDevices.map((device) {
-                    final isSelected = selectedDeviceIds.contains(device.id);
-                    return CheckboxListTile(
-                      value: isSelected,
-                      onChanged: (v) {
-                        setState(() {
-                          if (v == true) {
-                            selectedDeviceIds.add(device.id);
-                          } else {
-                            selectedDeviceIds.remove(device.id);
-                          }
-                        });
-                      },
-                      title: Text(device.name),
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                    );
-                  }),
-                ],
-
-                const SizedBox(height: 24),
-
-                // ATTRIBUTES
-                Text('Attributes',
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                if (_attrPropCtrls.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'No attributes. Add some if needed.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                Column(
-                  children: List.generate(_attrPropCtrls.length, (i) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: TextFormField(
-                              controller: _attrPropCtrls[i],
-                              decoration:
-                                  const InputDecoration(labelText: 'Property'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 3,
-                            child: TextFormField(
-                              controller: _attrValCtrls[i],
-                              decoration:
-                                  const InputDecoration(labelText: 'Value'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            onPressed: () => _removeAttributeRow(i),
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Remove',
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add attribute'),
-                    onPressed: _addEmptyAttributeRow,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // SAVE
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!_formKey.currentState!.validate()) return;
-
-                    final dio =
-                        Provider.of<AuthService>(context, listen: false).dio;
-
-                    final mainAttachmentName =
-                        pickedImages.isNotEmpty ? pickedImages.first.name : '';
-
-                    final normalizedAmount = priceAmount.replaceAll(',', '.');
-                    final amountNum = num.parse(normalizedAmount);
-
-                    address.postcode = int.tryParse(_postcodeCtrl.text.trim());
-                    address.city = _cityCtrl.text.trim();
-                    address.state = _stateCtrl.text.trim();
-                    address.street1 = _street1Ctrl.text.trim();
-
-                    final priceDto = PriceDto(
-                      amountNum,
-                      currencyCode,
-                      currencyName,
-                      negotiable,
-                    );
-
-                    final collectedAttrs = _collectAttributes();
-
-                    final newService = NewUserServiceDto(
-                      serviceTypeId: selectedType!.id,
-                      name: name,
-                      description: description,
-                      mainAttachment: mainAttachmentName,
-                      devices: selectedDeviceIds,
-                      price: priceDto,
-                      attributes: collectedAttrs,
-                      address: address,
-                    );
-
-                    final attachments = <MultipartFile>[];
-                    for (final file in pickedImages) {
-                      final bytes = await file.readAsBytes();
-                      attachments.add(
-                        MultipartFile.fromBytes(
-                          bytes,
-                          filename: file.name,
-                          contentType: MediaType('image', 'jpeg'),
-                        ),
-                      );
-                    }
-
-                    final formData = FormData.fromMap({
-                      "data": MultipartFile.fromString(
-                        jsonEncode(newService.toJson()),
-                        filename: "data.json",
-                        contentType: MediaType("application", "json"),
-                      ),
-                      "attachments": attachments,
-                    });
-
-                    try {
-                      await dio.post('/v1/service/my', data: formData);
-                      widget.onFinish?.call(true);
-                      widget.onClose();
-                    } catch (e) {
-                      // ignore: avoid_print
-                      print('Error creating service: $e');
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error creating service: $e')),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
+              );
+            }),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Add attribute'),
+              onPressed: _addEmptyAttributeRow,
             ),
           ),
-        ),
+        ],
       ),
     );
   }

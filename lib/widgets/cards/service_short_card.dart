@@ -33,6 +33,7 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isMobile = MediaQuery.of(context).size.width < 700;
 
     final tags = widget.service.attributes
         .where((attr) =>
@@ -74,30 +75,30 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // === ОДНА ЛИНИЯ: title + price + actions ===
+                          // === Title + Actions ===
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // title
                               Expanded(
                                 child: Text(
                                   widget.service.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleLarge
+                                  style: (isMobile
+                                          ? theme.textTheme.titleMedium
+                                          : theme.textTheme.titleLarge)
                                       ?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              // price
-                              Text(
-                                priceStr,
-                                style: theme.textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
                               const SizedBox(width: 8),
-                              // actions
+                              if (!isMobile) ...[
+                                Text(
+                                  priceStr,
+                                  style: theme.textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
                               _ActionIcon(
                                 icon: Icons.chat_bubble_outline,
                                 tooltip: 'Message',
@@ -116,16 +117,27 @@ class _ServiceShortCardState extends State<ServiceShortCard> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          if (isMobile) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              priceStr,
+                              style: theme.textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
                           if (tags.isNotEmpty)
-                            _TagsHeading(attributes: tags),
-                          const SizedBox(height: 10),
+                            _TagsHeading(attributes: tags, isMobile: isMobile),
+                          const SizedBox(height: 8),
                           Text(
                             widget.service.description,
-                            maxLines: 4,
+                            maxLines: isMobile ? 3 : 4,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                                color: cs.onSurfaceVariant, height: 1.35),
+                            style: (isMobile
+                                    ? theme.textTheme.bodySmall
+                                    : theme.textTheme.bodyMedium)
+                                ?.copyWith(
+                                    color: cs.onSurfaceVariant, height: 1.35),
                           ),
                         ],
                       ),
@@ -248,8 +260,9 @@ class _ActionIcon extends StatelessWidget {
 
 class _TagsHeading extends StatelessWidget {
   final List<ServiceAttributeDto> attributes;
+  final bool isMobile;
 
-  const _TagsHeading({required this.attributes});
+  const _TagsHeading({required this.attributes, this.isMobile = false});
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +278,7 @@ class _TagsHeading extends StatelessWidget {
         child: Row(
           children: [
             for (var i = 0; i < attributes.length; i++) ...[
-              _Tag(attribute: attributes[i]),
+              _Tag(attribute: attributes[i], isMobile: isMobile),
               if (i != attributes.length - 1) const SizedBox(width: 8),
             ],
           ],
@@ -277,8 +290,9 @@ class _TagsHeading extends StatelessWidget {
 
 class _Tag extends StatelessWidget {
   final ServiceAttributeDto attribute;
+  final bool isMobile;
 
-  const _Tag({required this.attribute});
+  const _Tag({required this.attribute, this.isMobile = false});
 
   @override
   Widget build(BuildContext context) {
@@ -291,14 +305,18 @@ class _Tag extends StatelessWidget {
       if (value.isNotEmpty) value,
     ].join(': ');
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 10,
+        vertical: isMobile ? 4 : 6,
+      ),
       decoration: BoxDecoration(
         color: cs.secondary,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
-        style: theme.textTheme.bodyMedium?.copyWith(
+        style: (isMobile ? theme.textTheme.labelMedium : theme.textTheme.bodyMedium)
+            ?.copyWith(
           color: cs.onSecondary,
         ),
       ),

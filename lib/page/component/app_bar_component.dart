@@ -110,6 +110,131 @@ class _CustomAppBarState extends State<CustomAppBar> {
     // ВНИМАНИЕ: поиск не запускаем — будет учтен на следующем Enter/лупе
   }
 
+  void _showMobileSearch(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: StatefulBuilder(builder: (context, setModalState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildSearchCapsule(context,
+                      isMobilePopup: true, setModalState: setModalState),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  Widget _buildSearchCapsule(BuildContext context,
+      {bool isMobilePopup = false, StateSetter? setModalState}) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: isMobilePopup
+            ? colorScheme.surfaceContainerHighest
+            : colorScheme.onPrimary,
+        borderRadius: BorderRadius.circular(24),
+        border: isMobilePopup
+            ? Border.all(color: colorScheme.outlineVariant)
+            : null,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          // кнопка запуска поиска
+          IconButton(
+            tooltip: 'Search',
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              _applySearch();
+              if (isMobilePopup) Navigator.pop(context);
+            },
+          ),
+          const SizedBox(width: 4),
+
+          // категория
+          if (_loadingCats)
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedCategoryId,
+                isDense: true,
+                items: <DropdownMenuItem<String>>[
+                  ..._categories.map(
+                    (c) => DropdownMenuItem<String>(
+                      value: c.id,
+                      child: Text(
+                        c.displayName,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: (val) {
+                  _onSelectCategory(val);
+                  if (setModalState != null) setModalState(() {});
+                },
+              ),
+            ),
+
+          const SizedBox(width: 8),
+          // разделитель
+          Container(width: 1, height: 20, color: Colors.black12),
+          const SizedBox(width: 8),
+
+          // поле поиска (без автозапросов, только Enter)
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              autofocus: isMobilePopup,
+              decoration: const InputDecoration(
+                hintText: 'Search…',
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              onSubmitted: (_) {
+                _applySearch();
+                if (isMobilePopup) Navigator.pop(context);
+              },
+            ),
+          ),
+
+          IconButton(
+            icon: Icon(Icons.location_pin, color: colorScheme.primary),
+            onPressed: () async {
+              await fetchLocation();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -150,81 +275,17 @@ class _CustomAppBarState extends State<CustomAppBar> {
                 ],
               ),
 
-              // search + category filter в одной капсуле
-              Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onPrimary,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      // кнопка запуска поиска
-                      IconButton(
-                        tooltip: 'Search',
-                        icon: const Icon(Icons.search),
-                        onPressed: _applySearch,
-                      ),
-                      const SizedBox(width: 4),
-
-                      // категория
-                      if (_loadingCats)
-                        const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else
-                        DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedCategoryId,
-                            isDense: true,
-                            items: <DropdownMenuItem<String>>[
-                              ..._categories.map(
-                                (c) => DropdownMenuItem<String>(
-                                  value: c.id,
-                                  child: Text(
-                                    c.displayName,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: _onSelectCategory,
-                          ),
-                        ),
-
-                      const SizedBox(width: 8),
-                      // разделитель
-                      Container(width: 1, height: 20, color: Colors.black12),
-                      const SizedBox(width: 8),
-
-                      // поле поиска (без автозапросов, только Enter)
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: const InputDecoration(
-                            hintText: 'Search…',
-                            border: InputBorder.none,
-                            isDense: true,
-                          ),
-                          onSubmitted: (_) => _applySearch(),
-                        ),
-                      ),
-
-                      IconButton(
-                        icon: Icon(Icons.location_pin,
-                            color: colorScheme.primary),
-                        onPressed: () async {
-                          await fetchLocation();
-                        },
-                      ),
-                    ],
-                  ),
+              if (widget.contentWidth < 700)
+                IconButton(
+                  tooltip: 'Search',
+                  icon: const Icon(Icons.search),
+                  color: colorScheme.onPrimary,
+                  onPressed: () => _showMobileSearch(context),
+                )
+              else
+                Expanded(
+                  child: _buildSearchCapsule(context),
                 ),
-              ),
 
               const SizedBox(width: 16),
 

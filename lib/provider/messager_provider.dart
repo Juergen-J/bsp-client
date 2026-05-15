@@ -142,10 +142,11 @@ class MessagesProvider extends ChangeNotifier {
   }
 
   void selectChat(String chatId) {
-    _selectedChatId = chatId;
+    _selectedChatId = chatId.toString();
     _messages.clear();
     _messagePage = 0;
     _hasMoreMessages = true;
+    _isLoadingMessages = false;
     notifyListeners();
   }
 
@@ -157,11 +158,12 @@ class MessagesProvider extends ChangeNotifier {
   }
 
   Future<void> markAsViewed(List<String> messageIds) async {
-    if (!isLoggedIn || _selectedChatId == null) return;
+    if (!isLoggedIn || _selectedChatId == null || messageIds.isEmpty) return;
     try {
       final response = await _dio.put(
         'http://localhost:8090/v1/chat/$_selectedChatId/message/mark-as-viewed',
         data: messageIds,
+        options: Options(contentType: Headers.jsonContentType),
       );
       if (response.statusCode != 204) {
         print('Error markAsViewed: ${response.statusCode}');
@@ -171,9 +173,61 @@ class MessagesProvider extends ChangeNotifier {
     }
   }
 
-  void addMessage(Map<String, dynamic> message) {
+  Future<void> markCurrentChatMessagesAsViewed(String currentUserId) async {
+    if (_selectedChatId == null) return;
+
+    final unreadMessageIds = <String>[];
+    for (final message in _messages) {
+      final isIncoming = message['userId'] != currentUserId;
+      if (isIncoming && message['status'] == 'CREATED') {
+        unreadMessageIds.add(message['messageId']);
+        message['status'] = 'VIEWED';
+      }
+    }
+
+    if (unreadMessageIds.isEmpty) return;
+
+    await markAsViewed(unreadMessageIds);
+    _setSelectedConversationUnreadCountToZero();
+    notifyListeners();
+    await fetchConversations();
+  }
+
+  void _setSelectedConversationUnreadCountToZero() {
+    for (final conversation in _conversations) {
+      if (conversation['chatId'] == _selectedChatId) {
+        conversation['countUnreadMessages'] = 0;
+        break;
+      }
+    }
+  }
+
+  bool addMessage(Map<String, dynamic> message) {
+    final incomingChatId = message['chatId']?.toString();
+    final selectedChatId = _selectedChatId?.toString();
+
+    if (selectedChatId == null || incomingChatId == null) {
+      print('WS ignored: selectedChatId=$selectedChatId incomingChatId=$incomingChatId message=$message');
+      return false;
+    }
+
+    if (incomingChatId != selectedChatId) {
+      print('WS ignored: selectedChatId=$selectedChatId incomingChatId=$incomingChatId message=$message');
+      return false;
+    }
+
+    final messageId = message['messageId']?.toString();
+    final alreadyExists = _messages.any(
+          (existing) => existing['messageId']?.toString() == messageId,
+    );
+
+    if (alreadyExists) {
+      return false;
+    }
+
     _messages.insert(0, message);
     notifyListeners();
+    return true;
   }
 
   void updateUserOnlineStatus(String userId, String chatId, bool isOnline) {

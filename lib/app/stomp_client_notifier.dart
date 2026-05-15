@@ -24,6 +24,9 @@ class StompClientNotifier extends ChangeNotifier {
   String message = '';
   String? userId;
   bool get isConnected => _stompClient?.connected ?? false;
+  bool _messageSubscribed = false;
+  bool _reportSubscribed = false;
+  bool _userStatusSubscribed = false;
   StompClient? get stompClient => _stompClient;
 
 
@@ -73,15 +76,27 @@ class StompClientNotifier extends ChangeNotifier {
 
   void _onStompConnected(StompFrame frame) {
     print('Connected to WebSocket');
+    _messageSubscribed = false;
+    _reportSubscribed = false;
+    _userStatusSubscribed = false;
+
     _subscribeToMessageWs();
     _subscribeToReportWs();
     _subscribeToUserStatusWs();
+
+    notifyListeners();
   }
 
   void _subscribeToMessageWs() {
+    if (_messageSubscribed) return;
+
+    print('SUBSCRIBE /user/topic/messages');
+    _messageSubscribed = true;
+
     _stompClient?.subscribe(
       destination: '/user/topic/messages',
       callback: (frame) async {
+        print('RAW /topic/messages received: ${frame.body}');
         if (frame.body != null) {
           print('Message received: ${frame.body}');
           if (frame.body != null) {
@@ -105,9 +120,15 @@ class StompClientNotifier extends ChangeNotifier {
   }
 
   void _subscribeToReportWs() {
+    if (_reportSubscribed) return;
+
+    print('SUBSCRIBE /user/topic/message-reports');
+    _reportSubscribed = true;
+
     _stompClient?.subscribe(
       destination: '/user/topic/message-reports',
       callback: (frame) async {
+        print('RAW /topic/message-reports received: ${frame.body}');
         if (frame.body != null) {
           reportQueue.add(frame.body!);
           if (_processingReports) return;
@@ -128,6 +149,11 @@ class StompClientNotifier extends ChangeNotifier {
   }
 
   void _subscribeToUserStatusWs() {
+    if (_userStatusSubscribed) return;
+
+    print('SUBSCRIBE /user/topic/user-status');
+    _userStatusSubscribed = true;
+
     _stompClient?.subscribe(
       destination: '/user/topic/user-status',
       callback: (frame) async {
@@ -158,8 +184,13 @@ class StompClientNotifier extends ChangeNotifier {
   }
 
   void send({required String destination, required Object message}) {
-    _stompClient?.send(
-      destination: '/app/v1/send-message',
+    if (_stompClient == null || !_stompClient!.connected) {
+      print('Cannot send STOMP message: client is not connected');
+      return;
+    }
+
+    _stompClient!.send(
+      destination: destination,
       body: jsonEncode(message),
     );
   }

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollview_observer/scrollview_observer.dart';
-import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'dart:convert';
 import '../app/stomp_client_notifier.dart';
 import '../provider/messager_provider.dart';
@@ -18,7 +17,7 @@ class MessagesPage extends StatefulWidget {
 
 class MessagesPageState extends State<MessagesPage> {
   BuildContext? _listViewContext;
-  late StompClient? _stompClient;
+  VoidCallback? _stompListener;
   final ScrollController _scrollControllerMessage = ScrollController();
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
@@ -50,19 +49,30 @@ class MessagesPageState extends State<MessagesPage> {
     if (stompProvider.stompClient == null || !stompProvider.isConnected) {
       stompProvider.connectStompClient();
     }
-    stompProvider.addListener(() {
+    _stompListener = () async {
+      if (!mounted) return;
+
       final messagesProv = context.read<MessagesProvider>();
+      final currentUserId = stompProvider.userId;
 
       if (stompProvider.message.isNotEmpty) {
         final messageMap = jsonDecode(stompProvider.message);
-        messagesProv.addMessage(messageMap);
+        print('WS received in MessagesPage: $messageMap');
+        print('Current selectedChatId: ${messagesProv.selectedChatId}');
 
-        if (messageMap['userId'] == stompProvider.userId) {
+        final addedToCurrentChat = messagesProv.addMessage(messageMap);
+        print('addedToCurrentChat=$addedToCurrentChat');
+
+        if (addedToCurrentChat) {
+          if (currentUserId != null && messageMap['userId'] != currentUserId) {
+            await messagesProv.markCurrentChatMessagesAsViewed(currentUserId);
+          }
+
           _scrollDownChat();
+          _runManualListObserve();
         }
 
-        messagesProv.fetchConversations();
-        _runManualListObserve();
+        await messagesProv.fetchConversations();
       }
 
       if (stompProvider.userStatus.isNotEmpty) {
@@ -73,14 +83,13 @@ class MessagesPageState extends State<MessagesPage> {
 
         final isOnline = status == 'ONLINE';
         messagesProv.updateUserOnlineStatus(userId, chatId, isOnline);
-
       }
 
       if (stompProvider.report.isNotEmpty) {
-        final report = jsonDecode(stompProvider.report);
-        messagesProv.fetchConversations();
+        await messagesProv.fetchConversations();
       }
-    });
+    };
+    stompProvider.addListener(_stompListener!);
   }
 
   void _scrollMessageListener() async {
@@ -128,16 +137,35 @@ class MessagesPageState extends State<MessagesPage> {
 
   void _sendMessage() {
     final messagesProv = context.read<MessagesProvider>();
-    if (_controller.text.isNotEmpty && messagesProv.selectedChatId != null) {
-      final message = {
+    final userInfo = Provider.of<AuthService>(context, listen: false).getUserInfo();
+    final text = _controller.text.trim();
+
+    if (text.isNotEmpty && messagesProv.selectedChatId != null && userInfo != null) {
+      final outgoingMessage = {
         "chatId": messagesProv.selectedChatId,
-        "message": _controller.text
+        "message": text,
       };
+
+      final localMessage = {
+        "messageId": "local-${DateTime.now().millisecondsSinceEpoch}",
+        "userId": userInfo.id,
+        "username": userInfo.email,
+        "chatId": messagesProv.selectedChatId,
+        "message": text,
+        "status": "CREATED",
+      };
+
+      messagesProv.addMessage(localMessage);
+      print('SEND message to backend: $outgoingMessage');
+      print('stomp connected: ${stompProvider.isConnected}');
+      print('stomp userId: ${stompProvider.userId}');
       stompProvider.send(
         destination: '/app/v1/send-message',
-        message: message,
+        message: outgoingMessage,
       );
+
       _controller.clear();
+      _scrollDownChat();
     }
   }
 
@@ -155,13 +183,16 @@ class MessagesPageState extends State<MessagesPage> {
 
   void _runManualListObserve() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _listViewContext == null) return;
       ListViewOnceObserveNotification().dispatch(_listViewContext);
     });
   }
 
   @override
   void dispose() {
-    _stompClient?.deactivate();
+    if (_stompListener != null) {
+      stompProvider.removeListener(_stompListener!);
+    }
     _controller.dispose();
     _searchController.dispose();
     _scrollControllerMessage.removeListener(_scrollMessageListener);
@@ -275,8 +306,15 @@ class MessagesPageState extends State<MessagesPage> {
           child: InkWell(
             onTap: () {
               final msgProv = context.read<MessagesProvider>();
-              msgProv.selectChat(conversation['chatId']);
-              msgProv.fetchMessages();
+              final chatId = conversation['chatId'].toString();
+
+              msgProv.selectChat(chatId);
+              msgProv.fetchMessages().then((_) {
+                final currentUserId = stompProvider.userId;
+                if (currentUserId != null) {
+                  msgProv.markCurrentChatMessagesAsViewed(currentUserId);
+                }
+              });
 
               setState(() {
                 _showMessagesOnly = true;
@@ -409,17 +447,9 @@ class MessagesPageState extends State<MessagesPage> {
             ),
             child: ListViewObserver(
               onObserve: (resultMap) {
-                List<String> unreadMessagesId = [];
-                var items = resultMap.displayingChildModelList;
-                for (var item in items) {
-                  if (messages[item.index]["status"] == "CREATED") {
-                    unreadMessagesId.add(messages[item.index]["messageId"]);
-                    messages[item.index]["status"] = "VIEWED";
-                  }
-                }
-                if (unreadMessagesId.isNotEmpty) {
-                  messagesProv.markAsViewed(unreadMessagesId);
-                  messagesProv.fetchConversations();
+                final currentUserId = userInfo?.id;
+                if (currentUserId != null) {
+                  messagesProv.markCurrentChatMessagesAsViewed(currentUserId);
                 }
               },
               child: messages.isNotEmpty
